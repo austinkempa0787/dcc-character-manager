@@ -1,0 +1,23 @@
+# Build outputs
+build/bin/
+releases/*.dmg
+releases/*.zip
+releases/*.exe
+releases/**/*.exe
+releases/**/*.app
+dist/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# OS files
+.DS_Store
+
+# Character data (optional - keep if you want to share sample data)
+# character-sheets/
+
+# IDE
+.vscode/
+.idea/
+
