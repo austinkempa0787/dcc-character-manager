@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DCC Character Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>⚔️ DCC Character Manager</h1>
+        </header>
+
+        <nav class="main-nav">
+            <button class="nav-btn active" onclick="switchTab('characters')">Characters</button>
+            <button class="nav-btn" onclick="switchTab('maps')">Maps</button>
+            <button class="nav-btn" onclick="switchTab('world-notes')">World Notes</button>
+        </nav>
+
+        <!-- Characters Tab -->
+        <div id="characters-tab" class="tab-content active">
+            <!-- Character List View -->
+            <div id="character-list-view" class="view">
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="showCreateCharacter()">+ Create New Character</button>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="show-deleted-characters" onchange="toggleDeletedCharacters()">
+                        Show Deleted Characters
+                    </label>
+                </div>
+                <div id="character-list" class="character-grid"></div>
+            </div>
+
+            <!-- Character Edit View -->
+            <div id="character-edit-view" class="view" style="display: none;">
+                <div class="edit-view-container">
+                    <!-- Side Navigation -->
+                    <nav class="section-nav">
+                        <div class="section-nav-header">Quick Nav</div>
+                        <div class="section-nav-actions">
+                            <button class="nav-action-btn" onclick="showCharacterList()">← Back to List</button>
+                            <button class="nav-action-btn nav-action-info" onclick="document.getElementById('add-note-btn').click()">+ Add Activity Record</button>
+                            <button class="nav-action-btn nav-action-secondary" onclick="document.getElementById('export-btn').click()">Export History</button>
+                        </div>
+                        <div class="section-nav-divider"></div>
+                        <a href="#section-basic" class="section-nav-link" onclick="scrollToSection('section-basic'); return false;">Basic Info</a>
+                        <a href="#section-stats" class="section-nav-link" onclick="scrollToSection('section-stats'); return false;">Character Stats</a>
+                        <a href="#section-attributes" class="section-nav-link" onclick="scrollToSection('section-attributes'); return false;">Attributes</a>
+                        <a href="#section-saves" class="section-nav-link" onclick="scrollToSection('section-saves'); return false;">Saving Throws</a>
+                        <a href="#section-combat" class="section-nav-link" onclick="scrollToSection('section-combat'); return false;">Combat Info</a>
+                        <a href="#section-equipment" class="section-nav-link" onclick="scrollToSection('section-equipment'); return false;">Equipment</a>
+                        <a href="#section-abilities" class="section-nav-link" onclick="scrollToSection('section-abilities'); return false;">Abilities</a>
+                        <a href="#section-notes" class="section-nav-link" onclick="scrollToSection('section-notes'); return false;">Notes</a>
+                        <a href="#section-history" class="section-nav-link" onclick="scrollToSection('section-history'); return false;">History</a>
+                    </nav>
+
+                    <div class="character-form-wrapper">
+                        <form id="character-form" class="character-form">
+                            <input type="hidden" id="character-id">
+                            
+                            <div class="form-section" id="section-basic">
+                                <h2>Basic Information</h2>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="name">Name</label>
+                                        <input type="text" id="name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="level">Level</label>
+                                        <input type="number" id="level" min="0" value="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="alignment">Alignment</label>
+                                        <select id="alignment">
+                                            <option value="1">Lawful</option>
+                                            <option value="0">Neutral</option>
+                                            <option value="2">Chaotic</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="subsection">
+                                    <h3>Classes</h3>
+                                    <p class="help-text">When your character reaches level 1, add their class here. Multi-class characters can have multiple entries.</p>
+                                    <div id="classes-list"></div>
+                                    <button type="button" class="btn btn-small" onclick="addClassItem()">+ Add Class</button>
+                                </div>
+                            </div>
+
+                            <div class="form-section" id="section-stats">
+                                <h2>Character Stats</h2>
+                                <div class="two-column-layout">
+                                    <div class="column">
+                                        <h3>Health & Core Stats</h3>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="maxHealth">Max HP</label>
+                                                <input type="number" id="maxHealth" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="currentHealth">Current HP</label>
+                                                <input type="number" id="currentHealth" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="vertical-divider"></div>
+                                    <div class="column">
+                                        <h3>Combat Basics</h3>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="armorClass">AC <span id="ac-total" class="calculated-value" title=""></span></label>
+                                                <input type="number" id="armorClass" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="initiative">Initiative</label>
+                                                <input type="number" id="initiative">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section" id="section-attributes">
+                                <h2>Attributes</h2>
+                                <div class="attributes-grid">
+                                    <div class="attribute-group">
+                                        <h3>Strength <span class="modifier" id="strength-modifier">+0</span></h3>
+                                        <label>Base</label>
+                                        <input type="number" id="strength-base">
+                                        <label>Temporary</label>
+                                        <input type="number" id="strength-temp">
+                                    </div>
+                                    <div class="attribute-group">
+                                        <h3>Agility <span class="modifier" id="agility-modifier">+0</span></h3>
+                                        <label>Base</label>
+                                        <input type="number" id="agility-base">
+                                        <label>Temporary</label>
+                                        <input type="number" id="agility-temp">
+                                    </div>
+                                    <div class="attribute-group">
+                                        <h3>Stamina <span class="modifier" id="stamina-modifier">+0</span></h3>
+                                        <label>Base</label>
+                                        <input type="number" id="stamina-base">
+                                        <label>Temporary</label>
+                                        <input type="number" id="stamina-temp">
+                                    </div>
+                                    <div class="attribute-group">
+                                        <h3>Personality <span class="modifier" id="personality-modifier">+0</span></h3>
+                                        <label>Base</label>
+                                        <input type="number" id="personality-base">
+                                        <label>Temporary</label>
+                                        <input type="number" id="personality-temp">
+                                    </div>
+                                    <div class="attribute-group">
+                                        <h3>Intelligence <span class="modifier" id="intelligence-modifier">+0</span></h3>
+                                        <label>Base</label>
+                                        <input type="number" id="intelligence-base">
+                                        <label>Temporary</label>
+                                        <input type="number" id="intelligence-temp">
+                                    </div>
+                                    <div class="attribute-group">
+                                        <h3>Luck <span class="modifier" id="luck-modifier">+0</span></h3>
+                                        <label>Base</label>
+                                        <input type="number" id="luck-base">
+                                        <label>Temporary</label>
+                                        <input type="number" id="luck-temp">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section" id="section-saves">
+                                <h2>Saving Throws</h2>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="reflex">Reflex <span id="reflex-total" class="calculated-value" title=""></span></label>
+                                        <input type="number" id="reflex">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="fortitude">Fortitude <span id="fortitude-total" class="calculated-value" title=""></span></label>
+                                        <input type="number" id="fortitude">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="willpower">Willpower <span id="willpower-total" class="calculated-value" title=""></span></label>
+                                        <input type="number" id="willpower">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section" id="section-combat">
+                                <h2>Additional Character Info</h2>
+                                <div class="two-column-layout">
+                                    <div class="column">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="meleeAttackBonus">Melee Attack</label>
+                                                <input type="number" id="meleeAttackBonus" placeholder="+0">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="meleeDamageBonus">Melee Damage</label>
+                                                <input type="number" id="meleeDamageBonus" placeholder="+0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="vertical-divider"></div>
+                                    <div class="column">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="missileAttackBonus">Missile Attack</label>
+                                                <input type="number" id="missileAttackBonus" placeholder="+0">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="missileDamageBonus">Missile Damage</label>
+                                                <input type="number" id="missileDamageBonus" placeholder="+0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section" id="section-equipment">
+                                <h2>Equipment</h2>
+                                <div class="equipment-filters">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="show-deleted-equipment" onchange="toggleDeletedEquipment()">
+                                        Show Deleted Equipment
+                                    </label>
+                                    <div class="form-group-inline">
+                                        <label for="equipment-type-filter">Filter by Type:</label>
+                                        <select id="equipment-type-filter" onchange="filterEquipmentByType()">
+                                            <option value="all">All</option>
+                                            <option value="weapon">Weapon</option>
+                                            <option value="armor">Armor</option>
+                                            <option value="item">Item</option>
+                                            <option value="currency">Currency</option>
+                                            <option value="misc">Misc</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="equipment-list"></div>
+                                <button type="button" class="btn" onclick="addEquipmentItem()">+ Add Item</button>
+                            </div>
+
+                            <div class="form-section" id="section-abilities">
+                                <h2>Abilities & Powers</h2>
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="show-deleted-abilities" onchange="toggleDeletedAbilities()">
+                                    Show Deleted Abilities
+                                </label>
+                                <div id="abilities-list"></div>
+                                <button type="button" class="btn" onclick="addAbilityItem()">+ Add Ability</button>
+                            </div>
+
+                            <div class="form-section" id="section-notes">
+                                <h2>Notes</h2>
+                                <textarea id="notes" rows="4"></textarea>
+                            </div>
+                        </form>
+
+                        <div class="form-section" id="section-history">
+                            <h2>History</h2>
+                            <div id="history-log" class="history-log"></div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn" id="add-note-btn" onclick="showAddNoteModal()">+ Add Activity Record</button>
+                            <button type="button" class="btn" id="export-btn" onclick="showExportModal()">Export History</button>
+                            <button type="button" class="btn btn-danger" id="delete-btn" onclick="deleteCharacter()">Delete Character</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maps Tab -->
+        <div id="maps-tab" class="tab-content">
+            <!-- Map List View -->
+            <div id="map-list-view" class="view">
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="showCreateMap()">+ Create New Map</button>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="show-deleted-maps" onchange="toggleDeletedMaps()">
+                        Show Deleted Maps
+                    </label>
+                </div>
+                <div id="map-list" class="character-grid"></div>
+            </div>
+
+            <!-- Map Edit View -->
+            <div id="map-edit-view" class="view" style="display: none;">
+                <div class="map-editor">
+                    <!-- Left Sidebar with Controls -->
+                    <div class="map-sidebar">
+                        <button class="btn" onclick="showMapList()">← Back to List</button>
+                        
+                        <div class="control-section">
+                            <h4>Map Settings</h4>
+                            <div class="form-group">
+                                <label for="map-name">Map Name</label>
+                                <input type="text" id="map-name" placeholder="Enter map name">
+                            </div>
+                        </div>
+
+                        <div class="control-section">
+                            <h4>Drawing Tools</h4>
+                            <div class="tool-buttons">
+                                <button class="tool-btn active" data-tool="pen" onclick="selectTool('pen')">✏️ Pen</button>
+                                <button class="tool-btn" data-tool="line" onclick="selectTool('line')">📏 Line</button>
+                                <button class="tool-btn" data-tool="rectangle" onclick="selectTool('rectangle')">⬜ Rectangle</button>
+                                <button class="tool-btn" data-tool="circle" onclick="selectTool('circle')">⭕ Circle</button>
+                                <button class="tool-btn" data-tool="eraser" onclick="selectTool('eraser')">🧹 Eraser</button>
+                                <button class="tool-btn" data-tool="pan" onclick="selectTool('pan')">✋ Move</button>
+                                <button class="tool-btn" data-tool="icon" onclick="selectTool('icon')">🎯 Icon</button>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="stroke-color">Color</label>
+                                <input type="color" id="stroke-color" value="#000000" oninput="handleColorChange()">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="stroke-width">Width: <span id="stroke-width-value">2</span>px</label>
+                                <input type="range" id="stroke-width" min="1" max="20" value="2" oninput="handleStrokeWidthChange()">
+                            </div>
+                            
+                            <button class="btn" onclick="clearMapDrawing()">Clear Drawing</button>
+                        </div>
+
+                        <div class="control-section">
+                            <h4>Grid Settings</h4>
+                            <div class="form-group">
+                                <label for="grid-size">Grid Size</label>
+                                <input type="number" id="grid-size" value="50" min="10" max="200" onchange="updateGridSize()">
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="show-grid" checked onchange="toggleGrid()">
+                                    Show Grid
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="control-section">
+                            <h4>Background Image</h4>
+                            <button class="btn" onclick="document.getElementById('background-upload').click()">Upload Background</button>
+                            <input type="file" id="background-upload" accept="image/*" style="display: none;" onchange="handleBackgroundUpload(event)">
+                            
+                            <div id="background-controls" style="display: none;">
+                                <div class="form-group">
+                                    <label for="bg-opacity">Opacity: <span id="bg-opacity-value">50</span>%</label>
+                                    <input type="range" id="bg-opacity" min="0" max="100" value="50" oninput="updateBackgroundOpacity()">
+                                </div>
+                                <div class="form-group">
+                                    <label for="bg-scale">Scale: <span id="bg-scale-value">100</span>%</label>
+                                    <input type="range" id="bg-scale" min="10" max="300" value="100" oninput="updateBackgroundScale()">
+                                </div>
+                                <button class="btn btn-danger" onclick="removeBackground()">Remove Background</button>
+                            </div>
+                        </div>
+
+                        <div class="control-section icon-section" style="display: none;">
+                            <h4>Map Icons</h4>
+                            <div id="icon-categories" class="icon-categories"></div>
+                            <div id="icon-palette" class="icon-palette"></div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-danger" onclick="deleteMap()">Delete Map</button>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Area -->
+                    <div id="map-canvas-container" class="canvas-container-full"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- World Notes Tab -->
+        <div id="world-notes-tab" class="tab-content">
+            <div id="world-notes-list-view" class="view">
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="showCreateWorldNote()">+ Create New Note</button>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="show-deleted-world-notes" onchange="toggleDeletedWorldNotes()">
+                        Show Deleted Notes
+                    </label>
+                </div>
+                <div id="world-notes-list" class="notes-grid"></div>
+            </div>
+
+            <div id="world-note-edit-view" class="view" style="display: none;">
+                <button class="btn" onclick="showWorldNotesList()">← Back to List</button>
+                <form id="world-note-form" class="form-section">
+                    <input type="hidden" id="world-note-id">
+                    <div class="form-group">
+                        <label for="world-note-title">Title</label>
+                        <input type="text" id="world-note-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="world-note-content">Content</label>
+                        <textarea id="world-note-content" rows="15"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" onclick="saveWorldNote()">Save</button>
+                        <button type="button" class="btn btn-danger" onclick="deleteWorldNote()">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Activity Record Modal -->
+    <div id="add-note-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Add Activity Record</h2>
+            <div class="form-group">
+                <label for="activity-note">What happened?</label>
+                <textarea id="activity-note" rows="4" placeholder="Describe the activity or event..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="confirmAddNote()">Add Record</button>
+                <button class="btn" onclick="closeAddNoteModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HP Change Modal -->
+    <div id="hp-change-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>HP Changed</h2>
+            <p id="hp-change-message"></p>
+            <div class="form-group">
+                <label for="hp-change-note">Add a note? (optional)</label>
+                <textarea id="hp-change-note" rows="3" placeholder="What caused this HP change?"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="confirmHPChange()">Save</button>
+                <button class="btn" onclick="skipHPNote()">Skip</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Character Modal -->
+    <div id="export-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Export Character Sheet</h2>
+            <p>Export your character as an HTML file that can be saved as PDF.</p>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="export-full-history" checked>
+                    Include Full History
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="export-date-from">Date Range (optional):</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="date" id="export-date-from" placeholder="From">
+                    <span>to</span>
+                    <input type="date" id="export-date-to" placeholder="To">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="confirmExport()">Export</button>
+                <button class="btn" onclick="closeExportModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+

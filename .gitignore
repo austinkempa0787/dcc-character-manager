@@ -1,23 +1,58 @@
-# Build outputs
-build/bin/
-releases/*.dmg
-releases/*.zip
-releases/*.exe
-releases/**/*.exe
-releases/**/*.app
-dist/
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+build/
+releases/
 
-# Dependencies
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Frontend
 node_modules/
-frontend/node_modules/
+frontend/dist/
+frontend/wailsjs/
+frontend/package.json.md5
 
-# OS files
+# Dependency directories
+vendor/
+
+# OS Files
 .DS_Store
-
-# Character data (optional - keep if you want to share sample data)
-# character-sheets/
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
 

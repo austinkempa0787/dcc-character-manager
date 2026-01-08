@@ -1,0 +1,21 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "dcc-character-sheet",
+  "outputfilename": "dcc-character-sheet",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Austin Kempa",
+    "email": "austin.kempa@kalosflorida.com"
+  },
+  "info": {
+    "companyName": "Kalos",
+    "productName": "DCC Character Manager",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright.........",
+    "comments": "DCC RPG Character Manager"
+  }
+}
+
