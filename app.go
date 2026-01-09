@@ -67,6 +67,10 @@ func (a *App) SaveCharacter(character *models.Character, note string) error {
 	return a.storage.SaveCharacter(character, note)
 }
 
+func (a *App) AddHistoryNote(id string, note string) error {
+	return a.storage.AddHistoryNote(id, note)
+}
+
 func (a *App) DeleteCharacter(id string) error {
 	return a.storage.DeleteCharacter(id)
 }
@@ -167,6 +171,20 @@ func (a *App) DeleteWorldNote(id string) error {
 
 func (a *App) RestoreWorldNote(id string) error {
 	return a.storage.RestoreWorldNote(id)
+}
+
+// Debug logging method
+func (a *App) WriteDebugLog(message string) error {
+	logFile := "/tmp/dcc-undo-log.txt"
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	timestamp := time.Now().Format("2006-01-02 15:04:05.000")
+	_, err = f.WriteString(fmt.Sprintf("%s: %s\n", timestamp, message))
+	return err
 }
 
 // SaveAndOpenHTML saves an HTML file and opens it in the default browser
