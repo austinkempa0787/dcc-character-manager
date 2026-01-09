@@ -108,20 +108,33 @@ header h1 {
 }
 
 .btn-danger {
-    background: #a83232;
+    background: linear-gradient(135deg, #8b3a3a 0%, #6b2222 100%);
+    border: 1px solid #5a1a1a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-size: 0.95em;
 }
 
 .btn-danger:hover {
-    background: #882222;
+    background: linear-gradient(135deg, #a83232 0%, #882222 100%);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
 }
 
 .btn-small {
-    padding: 5px 10px;
-    font-size: 0.9em;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    border-radius: 4px;
+    font-weight: 500;
 }
 
 .btn-restore {
-    background: #5a7a3c;
+    background: linear-gradient(135deg, #5a7a3c 0%, #4a6a2c 100%);
+    border: 1px solid #3a5a1c;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-restore:hover {
+    background: linear-gradient(135deg, #6a8a4c 0%, #5a7a3c 100%);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
 }
 
 /* Toggle label */
@@ -743,6 +756,18 @@ select {
     background: #8b7355;
     color: white;
     font-weight: bold;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.btn-small {
+    padding: 6px 10px;
+    font-size: 0.85em;
+    flex: 1;
 }
 
 .icon-categories {

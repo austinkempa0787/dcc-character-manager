@@ -1,7 +1,7 @@
 import './style.css';
 
 // Import Wails runtime
-import { GetCharacter, GetCharacters, GetDeletedCharacters, SaveCharacter, DeleteCharacter, RestoreCharacter, ExportHistory, SaveAndOpenHTML } from '../wailsjs/go/main/App';
+import { GetCharacter, GetCharacters, GetDeletedCharacters, SaveCharacter, AddHistoryNote, DeleteCharacter, RestoreCharacter, ExportHistory, SaveAndOpenHTML } from '../wailsjs/go/main/App';
 import { GetMap, GetMaps, GetDeletedMaps, SaveMap, DeleteMap, RestoreMap, CreateMap } from '../wailsjs/go/main/App';
 import { GetWorldNote, GetWorldNotes, GetDeletedWorldNotes, SaveWorldNote, DeleteWorldNote, RestoreWorldNote } from '../wailsjs/go/main/App';
 
@@ -19,6 +19,7 @@ let showDeletedMaps = false;
 let showDeletedWorldNotes = false;
 let showDeletedEquipment = false;
 let showDeletedAbilities = false;
+let showDeletedClasses = false;
 let equipmentTypeFilter = 'all';
 let autoSaveTimeout = null;
 
@@ -201,7 +202,7 @@ window.editCharacter = async function(id) {
             classesList.innerHTML = '';
             if (char.classes && char.classes.length > 0) {
             char.classes.forEach((classItem, index) => {
-                if (!classItem.isActive) return;
+                if (!classItem.isActive && !showDeletedClasses) return;
                 addClassItemToDOM(classItem, index);
             });
         }
@@ -330,7 +331,7 @@ async function autoSaveCharacter() {
     }
 }
 
-function refreshHistory() {
+window.refreshHistory = function() {
     const historyLog = document.getElementById('history-log');
     if (currentCharacter.history && currentCharacter.history.length > 0) {
         const sortedHistory = [...currentCharacter.history].sort((a, b) => {
@@ -360,12 +361,26 @@ function refreshHistory() {
     }
 }
 
+function getDCCModifier(score) {
+    // DCC RPG ability score modifier table
+    if (score <= 3) return -3;
+    if (score <= 5) return -2;
+    if (score <= 8) return -1;
+    if (score <= 12) return 0;
+    if (score <= 15) return +1;
+    if (score <= 17) return +2;
+    if (score <= 19) return +3;
+    if (score <= 21) return +4;
+    if (score <= 23) return +5;
+    return +6; // 24+
+}
+
 function updateAttributeModifiers() {
     ['strength', 'agility', 'stamina', 'personality', 'intelligence', 'luck'].forEach(attr => {
         const base = parseInt(document.getElementById(`${attr}-base`).value) || 10;
         
         // Always calculate modifier from base only, never temporary
-        const modifier = Math.floor((base - 10) / 2);
+        const modifier = getDCCModifier(base);
         
         const modifierEl = document.getElementById(`${attr}-modifier`);
         if (modifierEl) {
@@ -404,7 +419,7 @@ function updateCalculatedValues() {
     
     // Calculate agility modifier for AC (always use base, never temporary)
     const agilityBase = parseInt(document.getElementById('agility-base').value) || 10;
-    const agilityMod = Math.floor((agilityBase - 10) / 2);
+    const agilityMod = getDCCModifier(agilityBase);
     
     // Calculate totals
     const totalReflex = baseReflex + reflexBonus;
@@ -874,6 +889,7 @@ window.removeClassItem = function(index) {
             btn.textContent = 'Restore';
             btn.onclick = () => restoreClassItem(index);
         }
+        if (!showDeletedClasses) items[index].style.display = 'none';
         scheduleAutoSave();
     }
 };
@@ -883,6 +899,7 @@ window.restoreClassItem = function(index) {
     if (items[index]) {
         items[index].dataset.isActive = '1';
         items[index].classList.remove('deleted');
+        items[index].style.display = '';
         items[index].querySelectorAll('input, textarea').forEach(el => el.disabled = false);
         const btn = items[index].querySelector('.btn-restore');
         if (btn) {
@@ -891,6 +908,20 @@ window.restoreClassItem = function(index) {
             btn.onclick = () => removeClassItem(index);
         }
         scheduleAutoSave();
+    }
+};
+
+window.toggleDeletedClasses = function() {
+    showDeletedClasses = document.getElementById('show-deleted-classes').checked;
+    if (currentCharacter) {
+        const classesList = document.getElementById('classes-list');
+        classesList.innerHTML = '';
+        if (currentCharacter.classes && currentCharacter.classes.length > 0) {
+            currentCharacter.classes.forEach((classItem, index) => {
+                if (!classItem.isActive && !showDeletedClasses) return;
+                addClassItemToDOM(classItem, index);
+            });
+        }
     }
 };
 
@@ -948,22 +979,11 @@ window.confirmAddNote = async function() {
     
     if (currentCharacter) {
         try {
-            // Add a manual history entry
-            const historyEntry = {
-                timestamp: new Date(),
-                changes: [],
-                note: note
-            };
-            
-            if (!currentCharacter.history) {
-                currentCharacter.history = [];
-            }
-            currentCharacter.history.push(historyEntry);
-            
-            await SaveCharacter(currentCharacter, note);
+            // Use AddHistoryNote to manually add the note
+            await AddHistoryNote(currentCharacter.id, note);
             const updated = await GetCharacter(currentCharacter.id);
             currentCharacter = updated;
-            refreshHistory();
+            window.refreshHistory();
             window.closeAddNoteModal();
         } catch (err) {
             console.error('Failed to add note:', err);
@@ -1013,16 +1033,16 @@ window.confirmHPChange = async function() {
     
     if (note && currentCharacter) {
         try {
-            await SaveCharacter(currentCharacter, note);
+            // Manually add a history note using the Go backend function
+            await AddHistoryNote(currentCharacter.id, note);
+            
+            // Reload to get updated history
             const updated = await GetCharacter(currentCharacter.id);
             currentCharacter = updated;
-            refreshHistory();
+            window.refreshHistory();
         } catch (err) {
-            console.error('Failed to save HP change note:', err);
+            console.error('Failed to add HP change note:', err);
         }
-        } else {
-        // No note, just auto-save
-        scheduleAutoSave();
     }
     
     pendingHPChange = null;
@@ -1481,6 +1501,9 @@ window.editMap = async function(id) {
             konvaCanvas.loadFromJSON('{}', currentMap.icons, iconImages);
         }
         
+        // Initialize undo/redo history after loading
+        konvaCanvas.initializeHistory();
+        
     } catch (err) {
         console.error('Failed to load map:', err);
         alert('Failed to load map: ' + err);
@@ -1603,10 +1626,35 @@ window.selectTool = function(tool) {
     
     // Show/hide icon palette
     const iconSection = document.querySelector('.icon-section');
+    const colorControl = document.getElementById('color-control');
+    const penWidthControl = document.getElementById('pen-width-control');
+    const eraserWidthControl = document.getElementById('eraser-width-control');
+    const undoRedoControls = document.getElementById('undo-redo-controls');
+    
     if (tool === 'icon') {
+        // Show icon palette, hide drawing controls
         iconSection.style.display = 'block';
+        if (colorControl) colorControl.style.display = 'none';
+        if (penWidthControl) penWidthControl.style.display = 'none';
+        if (eraserWidthControl) eraserWidthControl.style.display = 'none';
+        if (undoRedoControls) undoRedoControls.style.display = 'none';
     } else {
+        // Hide icon palette, show relevant drawing controls
         iconSection.style.display = 'none';
+        if (colorControl) colorControl.style.display = 'block';
+        if (penWidthControl) penWidthControl.style.display = 'block';
+        if (eraserWidthControl) eraserWidthControl.style.display = 'block';
+        if (undoRedoControls) undoRedoControls.style.display = 'flex';
+    }
+    
+    // Update cursor hint
+    const canvas = konvaCanvas?.stage?.container();
+    if (canvas) {
+        if (tool === 'select') {
+            canvas.title = 'Click on a line or shape to delete it';
+        } else {
+            canvas.title = '';
+        }
     }
 };
 
@@ -1622,6 +1670,26 @@ window.handleStrokeWidthChange = function() {
     document.getElementById('stroke-width-value').textContent = width;
     if (konvaCanvas) {
         konvaCanvas.setStrokeWidth(parseInt(width));
+    }
+};
+
+window.handleEraserWidthChange = function() {
+    const width = document.getElementById('eraser-width').value;
+    document.getElementById('eraser-width-value').textContent = width;
+    if (konvaCanvas) {
+        konvaCanvas.setEraserWidth(parseInt(width));
+    }
+};
+
+window.undoDrawing = function() {
+    if (konvaCanvas) {
+        konvaCanvas.undo();
+    }
+};
+
+window.redoDrawing = function() {
+    if (konvaCanvas) {
+        konvaCanvas.redo();
     }
 };
 
@@ -1749,6 +1817,21 @@ let spacePressed = false;
 let originalTool = null;
 
 window.addEventListener('keydown', (e) => {
+    // Undo/Redo shortcuts (only when map is open)
+    if (konvaCanvas && currentMap) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            undoDrawing();
+            return;
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+            e.preventDefault();
+            redoDrawing();
+            return;
+        }
+    }
+    
+    // Spacebar for pan
     if (e.code === 'Space' && !spacePressed && konvaCanvas && currentMap) {
         e.preventDefault();
         spacePressed = true;
@@ -1852,7 +1935,19 @@ window.saveWorldNote = async function() {
         };
         
         await SaveWorldNote(note);
-        alert('Note saved!');
+        
+        // Show temporary success message
+        const btn = event?.target;
+        const originalText = btn?.textContent || '';
+        if (btn) {
+            btn.textContent = '✓ Saved!';
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }
+        
         showWorldNotesList();
     } catch (err) {
         console.error('Failed to save world note:', err);

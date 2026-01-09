@@ -14,7 +14,13 @@ export class KonvaMapCanvas {
         this.currentShape = null;
         this.strokeColor = '#000000';
         this.strokeWidth = 2;
+        this.eraserWidth = 10; // Separate eraser width
         this.onSave = null; // Callback for auto-save
+        this.history = []; // Undo history
+        this.historyStep = -1; // Current position in history
+        this.maxHistorySize = 50; // Max undo steps
+        this.isRestoring = false; // Flag to prevent saving during undo/redo
+        this.selectedIcon = null; // Track currently selected icon
     }
 
     initialize(containerId, onSaveCallback) {
@@ -75,7 +81,10 @@ export class KonvaMapCanvas {
 
     getCursorForTool(tool) {
         switch(tool) {
-            case 'eraser': return 'not-allowed';
+            case 'eraser': 
+                // Circle cursor representing eraser size (scaled to be visible)
+                const size = Math.max(16, Math.min(this.eraserWidth * 2, 40)); // Scale to visible size
+                return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'%3E%3Ccircle cx='${size/2}' cy='${size/2}' r='${size/2 - 1}' fill='rgba(255,255,255,0.3)' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") ${size/2} ${size/2}, auto`;
             case 'pan': return 'grab';
             default: return 'crosshair';
         }
@@ -116,6 +125,17 @@ export class KonvaMapCanvas {
         this.stage.on('mousedown touchstart', (e) => this.handleDrawStart(e));
         this.stage.on('mousemove touchmove', (e) => this.handleDrawMove(e));
         this.stage.on('mouseup touchend', () => this.handleDrawEnd());
+        
+        // Click on stage to deselect icons
+        this.stage.on('click tap', (e) => {
+            // Only deselect if clicking on stage background (not on icons or drawing)
+            if (e.target === this.stage) {
+                if (this.selectedIcon) {
+                    this.deselectIcon(this.selectedIcon);
+                    this.selectedIcon = null;
+                }
+            }
+        });
     }
 
     setTool(tool) {
@@ -237,15 +257,26 @@ export class KonvaMapCanvas {
         console.log('[KonvaMapCanvas] Draw start:', this.currentTool, 'at', localPos);
 
         if (this.currentTool === 'pen' || this.currentTool === 'eraser') {
+            const width = this.currentTool === 'eraser' ? this.eraserWidth : this.strokeWidth;
             this.currentLine = new Konva.Line({
                 stroke: this.currentTool === 'eraser' ? '#ffffff' : this.strokeColor,
-                strokeWidth: this.strokeWidth,
+                strokeWidth: width,
                 globalCompositeOperation: this.currentTool === 'eraser' ? 'destination-out' : 'source-over',
                 lineCap: 'round',
                 lineJoin: 'round',
                 points: [localPos.x, localPos.y],
             });
             this.drawingLayer.add(this.currentLine);
+        } else if (this.currentTool === 'select') {
+            // Select mode - check if clicking on a shape to delete
+            const clickedShape = e.target;
+            if (clickedShape !== this.stage && clickedShape.getLayer() === this.drawingLayer) {
+                this.saveHistory();
+                clickedShape.destroy();
+                this.drawingLayer.batchDraw();
+                if (this.onSave) this.onSave();
+            }
+            return;
         } else {
             // For shapes, store start position
             this.shapeStartPos = localPos;
@@ -310,13 +341,18 @@ export class KonvaMapCanvas {
         if (!this.isDrawing) return;
 
         this.isDrawing = false;
+        
+        // Save history AFTER completing the stroke/shape
+        if (!this.isRestoring) {
+            this.saveHistory();
+        }
+        
         this.currentLine = null;
         this.currentShape = null;
         this.shapeStartPos = null;
 
-        // Trigger auto-save
-        if (this.onSave) {
-            console.log('[KonvaMapCanvas] Draw end, triggering save');
+        // Trigger auto-save (but not during undo/redo)
+        if (this.onSave && !this.isRestoring) {
             this.onSave();
         }
     }
@@ -402,25 +438,36 @@ export class KonvaMapCanvas {
         // Store icon data
         iconGroup.setAttr('iconData', iconData);
 
-        // Hover effects - show rotate and delete buttons
-        iconGroup.on('mouseenter', () => {
-            this.stage.container().style.cursor = 'pointer';
-            konvaImage.opacity(0.7);
-            rotateButton.visible(true);
-            deleteButton.visible(true);
-            this.iconLayer.batchDraw();
+        // Selection highlight (hidden by default)
+        const selectionRect = new Konva.Rect({
+            x: -iconSize / 2 - 4,
+            y: -iconSize / 2 - 4,
+            width: iconSize + 8,
+            height: iconSize + 8,
+            stroke: '#4a90e2',
+            strokeWidth: 3,
+            dash: [5, 5],
+            visible: false,
         });
+        iconGroup.add(selectionRect);
+        iconGroup.moveToTop(); // Move selection to bottom so image is on top
 
-        iconGroup.on('mouseleave', () => {
-            this.stage.container().style.cursor = 'crosshair';
-            konvaImage.opacity(1);
-            rotateButton.visible(false);
-            deleteButton.visible(false);
-            this.iconLayer.batchDraw();
+        // Click to select icon
+        iconGroup.on('click tap', (e) => {
+            e.cancelBubble = true; // Don't trigger stage click
+            
+            // Deselect previous icon
+            if (this.selectedIcon && this.selectedIcon !== iconGroup) {
+                this.deselectIcon(this.selectedIcon);
+            }
+            
+            // Select this icon
+            this.selectedIcon = iconGroup;
+            this.selectIcon(iconGroup);
         });
 
         // Click rotate button to rotate 90 degrees
-        rotateButton.on('click', (e) => {
+        rotateButton.on('click tap', (e) => {
             e.cancelBubble = true; // Don't trigger group drag
             const currentRotation = konvaImage.rotation();
             konvaImage.rotation(currentRotation + 90);
@@ -429,8 +476,11 @@ export class KonvaMapCanvas {
         });
 
         // Click delete button to remove icon
-        deleteButton.on('click', (e) => {
+        deleteButton.on('click tap', (e) => {
             e.cancelBubble = true; // Don't trigger group drag
+            if (this.selectedIcon === iconGroup) {
+                this.selectedIcon = null;
+            }
             iconGroup.destroy();
             this.iconLayer.batchDraw();
             if (this.onSave) this.onSave();
@@ -544,9 +594,125 @@ export class KonvaMapCanvas {
     }
 
     clearDrawing() {
+        this.saveHistory();
         this.drawingLayer.destroyChildren();
         this.drawingLayer.batchDraw();
         if (this.onSave) this.onSave();
+    }
+
+    // History management for undo/redo
+    saveHistory() {
+        // Remove any history after current step (for redo)
+        this.history = this.history.slice(0, this.historyStep + 1);
+        
+        // Save current drawing layer state
+        const state = this.drawingLayer.toJSON();
+        this.history.push(state);
+        
+        // Limit history size
+        if (this.history.length > this.maxHistorySize) {
+            this.history.shift();
+        } else {
+            this.historyStep++;
+        }
+    }
+
+    undo() {
+        if (this.historyStep > 0) {
+            this.historyStep--;
+            this.restoreHistory();
+        }
+    }
+
+    redo() {
+        if (this.historyStep < this.history.length - 1) {
+            this.historyStep++;
+            this.restoreHistory();
+        }
+    }
+
+    restoreHistory() {
+        if (this.historyStep >= 0 && this.historyStep < this.history.length) {
+            this.isRestoring = true;
+            
+            const state = this.history[this.historyStep];
+            
+            // Clear current drawing layer
+            this.drawingLayer.destroyChildren();
+            
+            // Restore from JSON - directly parse and add children
+            try {
+                const parsed = JSON.parse(state);
+                if (parsed.children && Array.isArray(parsed.children)) {
+                    parsed.children.forEach((childData) => {
+                        const child = Konva.Node.create(JSON.stringify(childData));
+                        this.drawingLayer.add(child);
+                    });
+                }
+            } catch(e) {
+                console.error('Error restoring history:', e);
+            }
+            
+            this.drawingLayer.batchDraw();
+            
+            // Delay the save slightly to ensure restore is complete
+            setTimeout(() => {
+                this.isRestoring = false;
+                if (this.onSave) this.onSave();
+            }, 50);
+        }
+    }
+
+    // Call this when loading a map to initialize history
+    initializeHistory() {
+        this.history = [];
+        this.historyStep = -1;
+        // Save initial state
+        this.saveHistory();
+    }
+
+    setEraserWidth(width) {
+        this.eraserWidth = width;
+    }
+
+    selectIcon(iconGroup) {
+        // Show selection highlight
+        const selectionRect = iconGroup.findOne('Rect');
+        if (selectionRect) {
+            selectionRect.visible(true);
+        }
+        
+        // Show rotate and delete buttons
+        const rotateButton = iconGroup.children[1]; // Second child
+        const deleteButton = iconGroup.children[2]; // Third child
+        if (rotateButton) rotateButton.visible(true);
+        if (deleteButton) deleteButton.visible(true);
+        
+        // Highlight the icon slightly
+        const iconImage = iconGroup.children[0]; // First child
+        if (iconImage) iconImage.opacity(0.9);
+        
+        this.iconLayer.batchDraw();
+    }
+
+    deselectIcon(iconGroup) {
+        // Hide selection highlight
+        const selectionRect = iconGroup.findOne('Rect');
+        if (selectionRect) {
+            selectionRect.visible(false);
+        }
+        
+        // Hide rotate and delete buttons
+        const rotateButton = iconGroup.children[1]; // Second child
+        const deleteButton = iconGroup.children[2]; // Third child
+        if (rotateButton) rotateButton.visible(false);
+        if (deleteButton) deleteButton.visible(false);
+        
+        // Restore icon opacity
+        const iconImage = iconGroup.children[0]; // First child
+        if (iconImage) iconImage.opacity(1);
+        
+        this.iconLayer.batchDraw();
     }
 
     destroy() {
@@ -558,5 +724,7 @@ export class KonvaMapCanvas {
         this.gridLayer = null;
         this.drawingLayer = null;
         this.iconLayer = null;
+        this.history = [];
+        this.historyStep = -1;
     }
 }

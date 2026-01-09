@@ -85,6 +85,10 @@
                                 <div class="subsection">
                                     <h3>Classes</h3>
                                     <p class="help-text">When your character reaches level 1, add their class here. Multi-class characters can have multiple entries.</p>
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="show-deleted-classes" onchange="toggleDeletedClasses()">
+                                        Show Deleted Classes
+                                    </label>
                                     <div id="classes-list"></div>
                                     <button type="button" class="btn btn-small" onclick="addClassItem()">+ Add Class</button>
                                 </div>
@@ -312,20 +316,28 @@
                                 <button class="tool-btn" data-tool="circle" onclick="selectTool('circle')">⭕ Circle</button>
                                 <button class="tool-btn" data-tool="eraser" onclick="selectTool('eraser')">🧹 Eraser</button>
                                 <button class="tool-btn" data-tool="pan" onclick="selectTool('pan')">✋ Move</button>
-                                <button class="tool-btn" data-tool="icon" onclick="selectTool('icon')">🎯 Icon</button>
+                                <button class="tool-btn" data-tool="icon" onclick="selectTool('icon')">🏛️ Icon</button>
                             </div>
                             
-                            <div class="form-group">
+                            <div class="form-group" id="color-control">
                                 <label for="stroke-color">Color</label>
                                 <input type="color" id="stroke-color" value="#000000" oninput="handleColorChange()">
                             </div>
                             
-                            <div class="form-group">
-                                <label for="stroke-width">Width: <span id="stroke-width-value">2</span>px</label>
+                            <div class="form-group" id="pen-width-control">
+                                <label for="stroke-width">Pen Width: <span id="stroke-width-value">2</span>px</label>
                                 <input type="range" id="stroke-width" min="1" max="20" value="2" oninput="handleStrokeWidthChange()">
                             </div>
                             
-                            <button class="btn" onclick="clearMapDrawing()">Clear Drawing</button>
+                            <div class="form-group" id="eraser-width-control">
+                                <label for="eraser-width">Eraser Width: <span id="eraser-width-value">10</span>px</label>
+                                <input type="range" id="eraser-width" min="5" max="50" value="10" oninput="handleEraserWidthChange()">
+                            </div>
+                            
+                            <div class="button-group" id="undo-redo-controls">
+                                <button class="btn btn-small" onclick="undoDrawing()" title="Undo (Ctrl+Z)">↶ Undo</button>
+                                <button class="btn btn-small" onclick="redoDrawing()" title="Redo (Ctrl+Y)">↷ Redo</button>
+                            </div>
                         </div>
 
                         <div class="control-section">
@@ -339,24 +351,6 @@
                                     <input type="checkbox" id="show-grid" checked onchange="toggleGrid()">
                                     Show Grid
                                 </label>
-                            </div>
-                        </div>
-
-                        <div class="control-section">
-                            <h4>Background Image</h4>
-                            <button class="btn" onclick="document.getElementById('background-upload').click()">Upload Background</button>
-                            <input type="file" id="background-upload" accept="image/*" style="display: none;" onchange="handleBackgroundUpload(event)">
-                            
-                            <div id="background-controls" style="display: none;">
-                                <div class="form-group">
-                                    <label for="bg-opacity">Opacity: <span id="bg-opacity-value">50</span>%</label>
-                                    <input type="range" id="bg-opacity" min="0" max="100" value="50" oninput="updateBackgroundOpacity()">
-                                </div>
-                                <div class="form-group">
-                                    <label for="bg-scale">Scale: <span id="bg-scale-value">100</span>%</label>
-                                    <input type="range" id="bg-scale" min="10" max="300" value="100" oninput="updateBackgroundScale()">
-                                </div>
-                                <button class="btn btn-danger" onclick="removeBackground()">Remove Background</button>
                             </div>
                         </div>
 
@@ -429,14 +423,14 @@
     <!-- HP Change Modal -->
     <div id="hp-change-modal" class="modal" style="display: none;">
         <div class="modal-content">
-            <h2>HP Changed</h2>
+            <h2>Health changed</h2>
             <p id="hp-change-message"></p>
             <div class="form-group">
-                <label for="hp-change-note">Add a note? (optional)</label>
-                <textarea id="hp-change-note" rows="3" placeholder="What caused this HP change?"></textarea>
+                <label for="hp-change-note">Reason for HP change?</label>
+                <textarea id="hp-change-note" rows="3" placeholder="optional..."></textarea>
             </div>
             <div class="form-actions">
-                <button class="btn btn-primary" onclick="confirmHPChange()">Save</button>
+                <button class="btn btn-primary" onclick="confirmHPChange()">OK</button>
                 <button class="btn" onclick="skipHPNote()">Skip</button>
             </div>
         </div>

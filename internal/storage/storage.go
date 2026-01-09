@@ -96,11 +96,33 @@ func (s *Storage) getCharactersFiltered(active bool) ([]*models.Character, error
 }
 
 func (s *Storage) SaveCharacter(character *models.Character, note string) error {
+	logFile := "/tmp/dcc-hp-save-log.txt"
+	f, _ := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if f != nil {
+		defer f.Close()
+		timestamp := time.Now().Format("2006-01-02 15:04:05.000")
+		f.WriteString(fmt.Sprintf("\n%s: SaveCharacter called for %s\n", timestamp, character.ID))
+		f.WriteString(fmt.Sprintf("  Incoming HP: %d\n", character.CurrentHealth))
+		f.WriteString(fmt.Sprintf("  Note: '%s'\n", note))
+	}
+
 	// Load existing character if it exists
 	existingChar, err := s.GetCharacter(character.ID)
 	if err == nil {
+		if f != nil {
+			f.WriteString(fmt.Sprintf("  Existing HP from disk: %d\n", existingChar.CurrentHealth))
+		}
+
 		// Compare and generate history
 		changes := s.detectCharacterChanges(existingChar, character)
+
+		if f != nil {
+			f.WriteString(fmt.Sprintf("  Changes detected: %d\n", len(changes)))
+			for i, change := range changes {
+				f.WriteString(fmt.Sprintf("    %d: %s\n", i, change))
+			}
+		}
+
 		if len(changes) > 0 {
 			historyEntry := models.HistoryEntry{
 				Timestamp: time.Now(),
@@ -108,13 +130,49 @@ func (s *Storage) SaveCharacter(character *models.Character, note string) error 
 				Note:      note,
 			}
 			character.History = append(existingChar.History, historyEntry)
+			if f != nil {
+				f.WriteString(fmt.Sprintf("  History entry created! Total history entries: %d\n", len(character.History)))
+			}
 		} else {
 			character.History = existingChar.History
+			if f != nil {
+				f.WriteString(fmt.Sprintf("  NO CHANGES - history unchanged. Total entries: %d\n", len(character.History)))
+			}
+		}
+	} else {
+		if f != nil {
+			f.WriteString(fmt.Sprintf("  Error loading existing char: %v\n", err))
 		}
 	}
 
 	filename := filepath.Join(s.baseDir, characterDir, fmt.Sprintf("%s.json", character.ID))
 
+	data, err := json.MarshalIndent(character, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filename, data, 0644)
+}
+
+func (s *Storage) AddHistoryNote(id string, note string) error {
+	// Load existing character
+	character, err := s.GetCharacter(id)
+	if err != nil {
+		return err
+	}
+
+	// Create a manual history entry with no changes
+	historyEntry := models.HistoryEntry{
+		Timestamp: time.Now(),
+		Changes:   []string{},
+		Note:      note,
+	}
+
+	character.History = append(character.History, historyEntry)
+
+	// Save the character
+	filename := filepath.Join(s.baseDir, characterDir, fmt.Sprintf("%s.json", character.ID))
 	data, err := json.MarshalIndent(character, "", "  ")
 	if err != nil {
 		return err
