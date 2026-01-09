@@ -2,3 +2,4 @@
 // Map functionality is primarily handled in main.js and KonvaMapCanvas.js
 export const Maps = {};
 
+

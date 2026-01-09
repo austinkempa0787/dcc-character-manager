@@ -187,6 +187,9 @@ window.editCharacter = async function(id) {
             });
         }
         
+        // Update equipped weight after loading equipment
+        updateEquippedWeight();
+        
         // Load abilities
         const abilitiesList = document.getElementById('abilities-list');
         abilitiesList.innerHTML = '';
@@ -539,6 +542,8 @@ function addEquipmentItemToDOM(item, index) {
         </div>
     ` : '';
     
+    const totalWeight = (item.quantity || 1) * (item.weight || 0);
+    
     div.innerHTML = `
         <div class="equipment-header">
             <input type="text" class="eq-name" value="${item.name}" placeholder="Item name" required ${!item.isActive ? 'disabled' : ''}>
@@ -552,6 +557,14 @@ function addEquipmentItemToDOM(item, index) {
             <div class="form-group-inline">
                 <label>Quantity:</label>
                 <input type="number" class="eq-quantity" value="${item.quantity}" min="1" ${!item.isActive ? 'disabled' : ''}>
+            </div>
+            <div class="form-group-inline">
+                <label>Weight (each):</label>
+                <input type="number" class="eq-weight" value="${item.weight || 0}" min="0" step="0.1" ${!item.isActive ? 'disabled' : ''}>
+            </div>
+            <div class="form-group-inline">
+                <label>Total Weight:</label>
+                <input type="number" class="eq-total-weight" value="${totalWeight.toFixed(1)}" disabled readonly style="background: #f0f0f0;">
             </div>
             <div class="form-group-inline">
                 <label>Type:</label>
@@ -572,6 +585,27 @@ function addEquipmentItemToDOM(item, index) {
         </div>
     `;
     equipmentList.appendChild(div);
+    
+    // Add change listeners for quantity and weight to update total weight
+    const quantityInput = div.querySelector('.eq-quantity');
+    const weightInput = div.querySelector('.eq-weight');
+    const totalWeightInput = div.querySelector('.eq-total-weight');
+    const equippedCheckbox = div.querySelector('.eq-equipped');
+    
+    const updateTotalWeight = () => {
+        const qty = parseInt(quantityInput.value) || 1;
+        const weight = parseFloat(weightInput.value) || 0;
+        totalWeightInput.value = (qty * weight).toFixed(1);
+        updateEquippedWeight();
+        scheduleAutoSave();
+    };
+    
+    quantityInput.addEventListener('change', updateTotalWeight);
+    weightInput.addEventListener('change', updateTotalWeight);
+    equippedCheckbox.addEventListener('change', () => {
+        updateEquippedWeight();
+        scheduleAutoSave();
+    });
     
     // Add change listener to type selector to show/hide conditional fields
     const typeSelect = div.querySelector('.eq-type');
@@ -609,11 +643,12 @@ function collectEquipmentFromForm() {
     document.querySelectorAll('.equipment-item').forEach(div => {
         const type = div.querySelector('.eq-type').value;
         const equippedCheckbox = div.querySelector('.eq-equipped');
+        const weightInput = div.querySelector('.eq-weight');
         const item = {
             id: div.dataset.id,
             name: div.querySelector('.eq-name').value,
             quantity: parseInt(div.querySelector('.eq-quantity').value) || 1,
-            weight: 0,
+            weight: weightInput ? parseFloat(weightInput.value) || 0 : 0,
             category: type,
             description: div.querySelector('.eq-description').value,
             equipped: equippedCheckbox ? equippedCheckbox.checked : false,
@@ -645,6 +680,35 @@ function collectEquipmentFromForm() {
     return items;
 }
 
+function updateEquippedWeight() {
+    let totalWeight = 0;
+    let totalCount = 0;
+    const items = document.getElementById('equipment-list').children;
+    
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const isActive = item.dataset.isActive === '1';
+        const equipped = item.querySelector('.eq-equipped')?.checked;
+        
+        if (isActive && equipped) {
+            const qty = parseInt(item.querySelector('.eq-quantity')?.value) || 1;
+            const weight = parseFloat(item.querySelector('.eq-weight')?.value) || 0;
+            totalWeight += qty * weight;
+            totalCount++;
+        }
+    }
+    
+    const weightDisplay = document.getElementById('total-equipped-weight');
+    const countDisplay = document.getElementById('total-equipped-count');
+    
+    if (weightDisplay) {
+        weightDisplay.textContent = totalWeight.toFixed(1);
+    }
+    if (countDisplay) {
+        countDisplay.textContent = totalCount;
+    }
+}
+
 window.removeEquipmentItem = function(index) {
     const items = document.getElementById('equipment-list').children;
     if (items[index]) {
@@ -657,8 +721,12 @@ window.removeEquipmentItem = function(index) {
             btn.textContent = 'Restore';
             btn.onclick = () => restoreEquipmentItem(index);
         }
-        if (!showDeletedEquipment) items[index].style.display = 'none';
-            scheduleAutoSave();
+        // Hide if "Show Deleted Equipment" is unchecked
+        if (!showDeletedEquipment) {
+            items[index].style.display = 'none';
+        }
+        updateEquippedWeight();
+        scheduleAutoSave();
     }
 };
 
@@ -675,7 +743,8 @@ window.restoreEquipmentItem = function(index) {
             btn.textContent = 'Delete';
             btn.onclick = () => removeEquipmentItem(index);
         }
-                    scheduleAutoSave();
+        updateEquippedWeight();
+        scheduleAutoSave();
     }
 };
 
@@ -695,11 +764,19 @@ function refreshEquipmentList() {
     equipmentList.innerHTML = '';
     if (currentCharacter.equipment && currentCharacter.equipment.length > 0) {
         currentCharacter.equipment.forEach((item, index) => {
-            if (!item.isActive && !showDeletedEquipment) return;
-            if (equipmentTypeFilter !== 'all' && item.type !== equipmentTypeFilter) return;
+            // Always add to DOM, but apply display logic
             addEquipmentItemToDOM(item, index);
+            
+            // Now hide/show based on filters
+            const itemDiv = equipmentList.children[equipmentList.children.length - 1];
+            const shouldHide = (!item.isActive && !showDeletedEquipment) || 
+                               (equipmentTypeFilter !== 'all' && item.type !== equipmentTypeFilter);
+            if (itemDiv) {
+                itemDiv.style.display = shouldHide ? 'none' : '';
+            }
         });
     }
+    updateEquippedWeight();
 }
 
 // Ability functions
