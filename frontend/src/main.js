@@ -29,6 +29,38 @@ let mapList = null;
 let iconImages = {};
 let selectedIconData = null;
 
+// Auto-resize text inputs and textareas based on content
+function autoResizeInput(input) {
+    if (input.tagName === 'TEXTAREA') {
+        // For textareas, adjust height
+        input.style.height = 'auto';
+        input.style.height = input.scrollHeight + 'px';
+    } else if (input.tagName === 'INPUT' && input.type === 'text') {
+        // For text inputs, adjust width
+        const minWidth = 100; // minimum width in pixels
+        const padding = 20; // extra padding
+        
+        // Create a temporary span to measure text width
+        const span = document.createElement('span');
+        span.style.visibility = 'hidden';
+        span.style.position = 'absolute';
+        span.style.whiteSpace = 'pre';
+        span.style.font = window.getComputedStyle(input).font;
+        span.textContent = input.value || input.placeholder || '';
+        document.body.appendChild(span);
+        
+        const textWidth = span.offsetWidth + padding;
+        document.body.removeChild(span);
+        
+        input.style.width = Math.max(minWidth, textWidth) + 'px';
+    }
+}
+
+function setupAutoResize(element) {
+    autoResizeInput(element);
+    element.addEventListener('input', () => autoResizeInput(element));
+}
+
 // Initialize app
 window.addEventListener('DOMContentLoaded', () => {
     // Ensure characters tab is visible and active
@@ -613,6 +645,11 @@ function addEquipmentItemToDOM(item, index) {
     `;
     equipmentList.appendChild(div);
     
+    // Setup auto-resize for text inputs and textareas
+    div.querySelectorAll('input[type="text"], textarea').forEach(el => {
+        setupAutoResize(el);
+    });
+    
     // Add change listeners for quantity and weight to update total weight
     const quantityInput = div.querySelector('.eq-quantity');
     const weightInput = div.querySelector('.eq-weight');
@@ -863,6 +900,11 @@ function addAbilityItemToDOM(ability, index) {
     `;
     abilitiesList.appendChild(div);
     
+    // Setup auto-resize for text inputs and textareas
+    div.querySelectorAll('input[type="text"], textarea').forEach(el => {
+        setupAutoResize(el);
+    });
+    
     div.querySelectorAll('input, textarea, select').forEach(el => {
         el.addEventListener('change', scheduleAutoSave);
         el.addEventListener('blur', scheduleAutoSave);
@@ -1004,6 +1046,11 @@ function addTableItemToDOM(table, index) {
     `;
     tablesList.appendChild(div);
     
+    // Setup auto-resize for text inputs
+    div.querySelectorAll('input[type="text"]').forEach(el => {
+        setupAutoResize(el);
+    });
+    
     div.querySelectorAll('input').forEach(el => {
         el.addEventListener('change', scheduleAutoSave);
         el.addEventListener('blur', scheduleAutoSave);
@@ -1116,6 +1163,11 @@ function addClassItemToDOM(classItem, index) {
         </div>
     `;
     classesList.appendChild(div);
+    
+    // Setup auto-resize for text inputs and textareas
+    div.querySelectorAll('input[type="text"], textarea').forEach(el => {
+        setupAutoResize(el);
+    });
     
     div.querySelectorAll('input, textarea').forEach(el => {
         el.addEventListener('change', scheduleAutoSave);
