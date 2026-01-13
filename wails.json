@@ -7,15 +7,15 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "Austin Kempa",
-    "email": "austin.kempa@kalosflorida.com"
+    "name": "austinkempa0787",
+    "email": ""
   },
   "info": {
-    "companyName": "Kalos",
+    "companyName": "",
     "productName": "DCC Character Manager",
     "productVersion": "1.1.4",
-    "copyright": "Copyright.........",
-    "comments": "DCC RPG Character Manager"
+    "copyright": "",
+    "comments": ""
   }
 }
 
