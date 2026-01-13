@@ -150,6 +150,8 @@ window.editCharacter = async function(id) {
         document.getElementById('alignment').value = char.alignment;
         document.getElementById('maxHealth').value = char.maxHealth;
         document.getElementById('currentHealth').value = char.currentHealth;
+        document.getElementById('currentExperience').value = char.currentExperience || 0;
+        document.getElementById('experienceNeeded').value = char.experienceNeeded || 0;
         document.getElementById('armorClass').value = char.armorClass;
         document.getElementById('initiative').value = char.initiative || 0;
         
@@ -195,8 +197,15 @@ window.editCharacter = async function(id) {
         abilitiesList.innerHTML = '';
         if (char.abilities && char.abilities.length > 0) {
             char.abilities.forEach((ability, index) => {
-                if (!ability.isActive && !showDeletedAbilities) return;
                 addAbilityItemToDOM(ability, index);
+                // Apply filters
+                const abilityDiv = abilitiesList.children[abilitiesList.children.length - 1];
+                if (abilityDiv) {
+                    const abilityType = ability.type || 'spell';
+                    const shouldHide = (!ability.isActive && !showDeletedAbilities) || 
+                                       (abilityTypeFilter !== 'all' && abilityType !== abilityTypeFilter);
+                    abilityDiv.style.display = shouldHide ? 'none' : '';
+                }
             });
         }
         
@@ -207,6 +216,20 @@ window.editCharacter = async function(id) {
             char.classes.forEach((classItem, index) => {
                 if (!classItem.isActive && !showDeletedClasses) return;
                 addClassItemToDOM(classItem, index);
+            });
+        }
+        
+        // Load tables
+        const tablesList = document.getElementById('tables-list');
+        tablesList.innerHTML = '';
+        if (char.tables && char.tables.length > 0) {
+            char.tables.forEach((table, index) => {
+                addTableItemToDOM(table, index);
+                // Hide deleted tables if showDeletedTables is false
+                const tableDiv = tablesList.children[tablesList.children.length - 1];
+                if (!table.isActive && !showDeletedTables && tableDiv) {
+                    tableDiv.style.display = 'none';
+                }
             });
         }
         
@@ -270,6 +293,7 @@ async function autoSaveCharacter() {
         const equipment = collectEquipmentFromForm();
         const abilities = collectAbilitiesFromForm();
         const classes = collectClassesFromForm();
+        const tables = collectTablesFromForm();
         
         const character = {
             id: id,
@@ -278,6 +302,8 @@ async function autoSaveCharacter() {
             alignment: parseInt(document.getElementById('alignment').value),
             maxHealth: parseInt(document.getElementById('maxHealth').value),
             currentHealth: parseInt(document.getElementById('currentHealth').value),
+            currentExperience: parseInt(document.getElementById('currentExperience').value) || 0,
+            experienceNeeded: parseInt(document.getElementById('experienceNeeded').value) || 0,
             armorClass: parseInt(document.getElementById('armorClass').value) || 10,
             initiative: parseInt(document.getElementById('initiative').value) || 0,
             isActive: currentCharacter.isActive,
@@ -322,6 +348,7 @@ async function autoSaveCharacter() {
             equipment: equipment,
             abilities: abilities,
             classes: classes,
+            tables: tables,
             history: currentCharacter.history || []
         };
         
@@ -769,8 +796,9 @@ function refreshEquipmentList() {
             
             // Now hide/show based on filters
             const itemDiv = equipmentList.children[equipmentList.children.length - 1];
+            const itemType = item.type || item.category; // Support both field names
             const shouldHide = (!item.isActive && !showDeletedEquipment) || 
-                               (equipmentTypeFilter !== 'all' && item.type !== equipmentTypeFilter);
+                               (equipmentTypeFilter !== 'all' && itemType !== equipmentTypeFilter);
             if (itemDiv) {
                 itemDiv.style.display = shouldHide ? 'none' : '';
             }
@@ -780,6 +808,8 @@ function refreshEquipmentList() {
 }
 
 // Ability functions
+let abilityTypeFilter = 'all';
+
 window.addAbilityItem = function() {
     const newId = 'ability-' + Date.now();
     const newItem = {
@@ -787,6 +817,7 @@ window.addAbilityItem = function() {
         name: '',
         description: '',
         page: '',
+        type: 'spell',  // Default to spell
         isActive: true
     };
     const index = document.getElementById('abilities-list').children.length;
@@ -800,14 +831,25 @@ function addAbilityItemToDOM(ability, index) {
     div.dataset.index = index;
     div.dataset.id = ability.id;
     div.dataset.isActive = ability.isActive ? '1' : '0';
+    div.dataset.type = ability.type || 'spell';
     
     const deleteOrRestoreButton = ability.isActive
         ? `<button type="button" class="btn-small btn-danger" onclick="removeAbilityItem(${index})">Delete</button>`
         : `<button type="button" class="btn-small btn-restore" onclick="restoreAbilityItem(${index})">Restore</button>`;
     
+    const abilityType = ability.type || 'spell';
+    
     div.innerHTML = `
         <div class="ability-header">
             <input type="text" class="ability-name" value="${ability.name}" placeholder="Ability name" required ${!ability.isActive ? 'disabled' : ''}>
+            <div class="form-group-inline" style="flex: 0 0 120px;">
+                <label>Type:</label>
+                <select class="ability-type" ${!ability.isActive ? 'disabled' : ''}>
+                    <option value="spell" ${abilityType === 'spell' ? 'selected' : ''}>Spell</option>
+                    <option value="ability" ${abilityType === 'ability' ? 'selected' : ''}>Ability</option>
+                    <option value="other" ${abilityType === 'other' ? 'selected' : ''}>Other</option>
+                </select>
+            </div>
             <div class="form-group-inline" style="flex: 0 0 120px;">
                 <label>Page:</label>
                 <input type="text" class="ability-page" value="${ability.pageNumber || ability.page || ''}" placeholder="Page #" ${!ability.isActive ? 'disabled' : ''}>
@@ -821,10 +863,19 @@ function addAbilityItemToDOM(ability, index) {
     `;
     abilitiesList.appendChild(div);
     
-    div.querySelectorAll('input, textarea').forEach(el => {
+    div.querySelectorAll('input, textarea, select').forEach(el => {
         el.addEventListener('change', scheduleAutoSave);
         el.addEventListener('blur', scheduleAutoSave);
     });
+    
+    // Also update dataset.type when select changes
+    const typeSelect = div.querySelector('.ability-type');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', () => {
+            div.dataset.type = typeSelect.value;
+            scheduleAutoSave();
+        });
+    }
 }
 
 function collectAbilitiesFromForm() {
@@ -834,6 +885,7 @@ function collectAbilitiesFromForm() {
             id: div.dataset.id,
             name: div.querySelector('.ability-name').value,
             description: div.querySelector('.ability-description').value,
+            type: div.querySelector('.ability-type')?.value || 'spell',
             pageNumber: div.querySelector('.ability-page')?.value || '',
             isActive: div.dataset.isActive === '1'
         });
@@ -879,13 +931,144 @@ window.toggleDeletedAbilities = function() {
     showDeletedAbilities = document.getElementById('show-deleted-abilities').checked;
     if (currentCharacter) {
         const abilitiesList = document.getElementById('abilities-list');
-        abilitiesList.innerHTML = '';
-        if (currentCharacter.abilities && currentCharacter.abilities.length > 0) {
-            currentCharacter.abilities.forEach((ability, index) => {
-                if (!ability.isActive && !showDeletedAbilities) return;
-                addAbilityItemToDOM(ability, index);
-            });
+        // Update visibility for all ability items
+        Array.from(abilitiesList.children).forEach((abilityDiv) => {
+            const isActive = abilityDiv.dataset.isActive === '1';
+            const abilityType = abilityDiv.dataset.type || 'spell';
+            const shouldHide = (!isActive && !showDeletedAbilities) || 
+                               (abilityTypeFilter !== 'all' && abilityType !== abilityTypeFilter);
+            abilityDiv.style.display = shouldHide ? 'none' : '';
+        });
+    }
+};
+
+window.filterAbilitiesByType = function() {
+    abilityTypeFilter = document.getElementById('ability-type-filter').value;
+    if (currentCharacter) {
+        const abilitiesList = document.getElementById('abilities-list');
+        // Update visibility for all ability items
+        Array.from(abilitiesList.children).forEach((abilityDiv) => {
+            const isActive = abilityDiv.dataset.isActive === '1';
+            const abilityType = abilityDiv.dataset.type || 'spell';
+            const shouldHide = (!isActive && !showDeletedAbilities) || 
+                               (abilityTypeFilter !== 'all' && abilityType !== abilityTypeFilter);
+            abilityDiv.style.display = shouldHide ? 'none' : '';
+        });
+    }
+};
+
+// Table functions
+let showDeletedTables = false;
+
+window.addTableItem = function() {
+    const newId = 'table-' + Date.now();
+    const newItem = {
+        id: newId,
+        name: '',
+        number: '',
+        dice: '',
+        isActive: true
+    };
+    const index = document.getElementById('tables-list').children.length;
+    addTableItemToDOM(newItem, index);
+};
+
+function addTableItemToDOM(table, index) {
+    const tablesList = document.getElementById('tables-list');
+    const div = document.createElement('div');
+    div.className = 'table-item' + (!table.isActive ? ' deleted' : '');
+    div.dataset.index = index;
+    div.dataset.id = table.id;
+    div.dataset.isActive = table.isActive ? '1' : '0';
+    
+    const deleteOrRestoreButton = table.isActive
+        ? `<button type="button" class="btn-small btn-danger" onclick="removeTableItem(${index})">Delete</button>`
+        : `<button type="button" class="btn-small btn-restore" onclick="restoreTableItem(${index})">Restore</button>`;
+    
+    div.innerHTML = `
+        <div class="table-header">
+            <div class="form-group-inline" style="flex: 1;">
+                <label>Table Name:</label>
+                <input type="text" class="table-name" value="${table.name}" placeholder="Table name (e.g., Corruption)" required ${!table.isActive ? 'disabled' : ''}>
+            </div>
+            <div class="form-group-inline" style="flex: 0 0 150px;">
+                <label>Number:</label>
+                <input type="text" class="table-number" value="${table.number}" placeholder="e.g., 5-4" ${!table.isActive ? 'disabled' : ''}>
+            </div>
+            <div class="form-group-inline" style="flex: 0 0 120px;">
+                <label>Dice:</label>
+                <input type="text" class="table-dice" value="${table.dice}" placeholder="e.g., 1d8" ${!table.isActive ? 'disabled' : ''}>
+            </div>
+            ${deleteOrRestoreButton}
+        </div>
+    `;
+    tablesList.appendChild(div);
+    
+    div.querySelectorAll('input').forEach(el => {
+        el.addEventListener('change', scheduleAutoSave);
+        el.addEventListener('blur', scheduleAutoSave);
+    });
+}
+
+function collectTablesFromForm() {
+    const items = [];
+    document.querySelectorAll('.table-item').forEach(div => {
+        items.push({
+            id: div.dataset.id,
+            name: div.querySelector('.table-name').value,
+            number: div.querySelector('.table-number').value,
+            dice: div.querySelector('.table-dice').value,
+            isActive: div.dataset.isActive === '1'
+        });
+    });
+    return items;
+}
+
+window.removeTableItem = function(index) {
+    const items = document.getElementById('tables-list').children;
+    if (items[index]) {
+        items[index].dataset.isActive = '0';
+        items[index].classList.add('deleted');
+        items[index].querySelectorAll('input').forEach(el => el.disabled = true);
+        const btn = items[index].querySelector('.btn-danger');
+        if (btn) {
+            btn.className = 'btn-small btn-restore';
+            btn.textContent = 'Restore';
+            btn.onclick = () => restoreTableItem(index);
         }
+        if (!showDeletedTables) items[index].style.display = 'none';
+        scheduleAutoSave();
+    }
+};
+
+window.restoreTableItem = function(index) {
+    const items = document.getElementById('tables-list').children;
+    if (items[index]) {
+        items[index].dataset.isActive = '1';
+        items[index].classList.remove('deleted');
+        items[index].style.display = '';
+        items[index].querySelectorAll('input').forEach(el => el.disabled = false);
+        const btn = items[index].querySelector('.btn-restore');
+        if (btn) {
+            btn.className = 'btn-small btn-danger';
+            btn.textContent = 'Delete';
+            btn.onclick = () => removeTableItem(index);
+        }
+        scheduleAutoSave();
+    }
+};
+
+window.toggleDeletedTables = function() {
+    showDeletedTables = document.getElementById('show-deleted-tables').checked;
+    if (currentCharacter) {
+        const tablesList = document.getElementById('tables-list');
+        // Update visibility for all table items
+        Array.from(tablesList.children).forEach((tableDiv) => {
+            const isActive = tableDiv.dataset.isActive === '1';
+            if (!isActive) {
+                tableDiv.style.display = showDeletedTables ? '' : 'none';
+            }
+        });
     }
 };
 
@@ -1860,17 +2043,23 @@ async function autoSaveMap() {
     }
 }
 
+// Expose to window for HTML onclick handlers
+window.autoSaveMap = autoSaveMap;
+
 window.deleteMap = async function() {
     if (!currentMap) return;
     
-    if (confirm(`Delete map "${currentMap.name}"?`)) {
-        try {
-            await DeleteMap(currentMap.id);
-            showMapList();
-    } catch (err) {
-            console.error('Failed to delete map:', err);
-            alert('Failed to delete map: ' + err);
+    try {
+        await DeleteMap(currentMap.id);
+        currentMap = null;
+        if (konvaCanvas) {
+            konvaCanvas.destroy();
+            konvaCanvas = null;
         }
+        showMapList();
+    } catch (err) {
+        console.error('Failed to delete map:', err);
+        alert('Failed to delete map: ' + err);
     }
 };
 
@@ -1908,12 +2097,21 @@ window.addEventListener('keydown', (e) => {
         }
     }
     
-    // Spacebar for pan
+    // Spacebar for pan - only if NOT typing in an input or textarea
     if (e.code === 'Space' && !spacePressed && konvaCanvas && currentMap) {
-        e.preventDefault();
-        spacePressed = true;
-        originalTool = konvaCanvas.currentTool;
-        konvaCanvas.setTool('pan');
+        const activeElement = document.activeElement;
+        const isTyping = activeElement && (
+            activeElement.tagName === 'INPUT' || 
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.isContentEditable
+        );
+        
+        if (!isTyping) {
+            e.preventDefault();
+            spacePressed = true;
+            originalTool = konvaCanvas.currentTool;
+            konvaCanvas.setTool('pan');
+        }
     }
 });
 

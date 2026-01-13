@@ -53,6 +53,7 @@
                         <a href="#section-combat" class="section-nav-link" onclick="scrollToSection('section-combat'); return false;">Combat Info</a>
                         <a href="#section-equipment" class="section-nav-link" onclick="scrollToSection('section-equipment'); return false;">Equipment</a>
                         <a href="#section-abilities" class="section-nav-link" onclick="scrollToSection('section-abilities'); return false;">Abilities</a>
+                        <a href="#section-tables" class="section-nav-link" onclick="scrollToSection('section-tables'); return false;">Tables</a>
                         <a href="#section-notes" class="section-nav-link" onclick="scrollToSection('section-notes'); return false;">Notes</a>
                         <a href="#section-history" class="section-nav-link" onclick="scrollToSection('section-history'); return false;">History</a>
                     </nav>
@@ -107,6 +108,16 @@
                                             <div class="form-group">
                                                 <label for="currentHealth">Current HP</label>
                                                 <input type="number" id="currentHealth" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="currentExperience">Current XP</label>
+                                                <input type="number" id="currentExperience">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="experienceNeeded">XP Needed</label>
+                                                <input type="number" id="experienceNeeded">
                                             </div>
                                         </div>
                                     </div>
@@ -252,12 +263,34 @@
 
                             <div class="form-section" id="section-abilities">
                                 <h2>Abilities & Powers</h2>
-                                <label class="toggle-label">
-                                    <input type="checkbox" id="show-deleted-abilities" onchange="toggleDeletedAbilities()">
-                                    Show Deleted Abilities
-                                </label>
+                                <div class="ability-filters">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="show-deleted-abilities" onchange="toggleDeletedAbilities()">
+                                        Show Deleted Abilities
+                                    </label>
+                                    <div class="form-group-inline">
+                                        <label for="ability-type-filter">Filter by Type:</label>
+                                        <select id="ability-type-filter" onchange="filterAbilitiesByType()">
+                                            <option value="all">All</option>
+                                            <option value="spell">Spell</option>
+                                            <option value="ability">Ability</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <div id="abilities-list"></div>
                                 <button type="button" class="btn" onclick="addAbilityItem()">+ Add Ability</button>
+                            </div>
+
+                            <div class="form-section" id="section-tables">
+                                <h2>Tables</h2>
+                                <p class="help-text">Custom tables for your character (e.g., critical hit tables, corruption tables, etc.)</p>
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="show-deleted-tables" onchange="toggleDeletedTables()">
+                                    Show Deleted Tables
+                                </label>
+                                <div id="tables-list"></div>
+                                <button type="button" class="btn" onclick="addTableItem()">+ Add Table</button>
                             </div>
 
                             <div class="form-section" id="section-notes">
@@ -306,7 +339,7 @@
                             <h4>Map Settings</h4>
                             <div class="form-group">
                                 <label for="map-name">Map Name</label>
-                                <input type="text" id="map-name" placeholder="Enter map name">
+                                <input type="text" id="map-name" placeholder="Enter map name" oninput="autoSaveMap()">
                             </div>
                         </div>
 

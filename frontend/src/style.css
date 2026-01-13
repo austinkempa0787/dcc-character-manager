@@ -504,9 +504,34 @@ select {
     cursor: pointer;
 }
 
+/* Abilities */
+.ability-filters {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.ability-filters .form-group-inline {
+    margin: 0;
+}
+
+.ability-filters select {
+    padding: 6px 10px;
+    border: 2px solid #8b7355;
+    border-radius: 6px;
+    background: #faf7f2;
+    color: #3d2f1f;
+    font-family: "Cinzel", serif;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
 .equipment-item,
 .ability-item,
-.class-item {
+.class-item,
+.table-item {
     background: #fff;
     padding: 15px;
     border-radius: 6px;
@@ -516,14 +541,16 @@ select {
 
 .equipment-item.deleted,
 .ability-item.deleted,
-.class-item.deleted {
+.class-item.deleted,
+.table-item.deleted {
     opacity: 0.6;
     border-style: dashed;
 }
 
 .equipment-header,
 .ability-header,
-.class-header {
+.class-header,
+.table-header {
     display: flex;
     gap: 10px;
     margin-bottom: 10px;
@@ -891,5 +918,4 @@ select {
     justify-content: center;
     margin-top: 20px;
 }
-
 
