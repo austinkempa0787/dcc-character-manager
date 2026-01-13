@@ -13,6 +13,8 @@ type Character struct {
 	Alignment            int              `json:"alignment"` // 0=Neutral, 1=Lawful, 2=Chaotic
 	MaxHealth            int              `json:"maxHealth"`
 	CurrentHealth        int              `json:"currentHealth"`
+	CurrentExperience    int              `json:"currentExperience"`
+	ExperienceNeeded     int              `json:"experienceNeeded"`
 	ArmorClass           int              `json:"armorClass"`
 	TotalExperience      int              `json:"totalExperience"`
 	Speed                int              `json:"speed"`
@@ -29,6 +31,7 @@ type Character struct {
 	Equipment            []Equipment      `json:"equipment"`
 	Abilities            []Ability        `json:"abilities"`
 	Classes              []Class          `json:"classes"`
+	Tables               []Table          `json:"tables"`
 	ActionDice           string           `json:"actionDice"`
 	Attack               int              `json:"attack"`
 	CritDice             string           `json:"critDice"`
@@ -96,4 +99,13 @@ type HistoryEntry struct {
 	Timestamp time.Time `json:"timestamp"`
 	Changes   []string  `json:"changes"`
 	Note      string    `json:"note"`
+}
+
+// Table represents a custom table for the character
+type Table struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Number      string `json:"number"`
+	Dice        string `json:"dice"`
+	IsActive    bool   `json:"isActive"`
 }
