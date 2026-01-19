@@ -18,6 +18,7 @@
             <button class="nav-btn active" onclick="switchTab('characters')">Characters</button>
             <button class="nav-btn" onclick="switchTab('maps')">Maps</button>
             <button class="nav-btn" onclick="switchTab('world-notes')">World Notes</button>
+            <button class="nav-btn" onclick="switchTab('party')">Party/Group</button>
         </nav>
 
         <!-- Characters Tab -->
@@ -41,9 +42,18 @@
                     <nav class="section-nav">
                         <div class="section-nav-header">Quick Nav</div>
                         <div class="section-nav-actions">
-                            <button class="nav-action-btn" onclick="showCharacterList()">← Back to List</button>
-                            <button class="nav-action-btn nav-action-info" onclick="document.getElementById('add-note-btn').click()">+ Add Activity Record</button>
-                            <button class="nav-action-btn nav-action-secondary" onclick="document.getElementById('export-btn').click()">Export History</button>
+                            <button class="nav-action-btn" onclick="showCharacterList()">
+                                <span class="btn-icon-part">←</span>
+                                <span class="btn-text-part">Back to List</span>
+                            </button>
+                            <button class="nav-action-btn nav-action-info" onclick="document.getElementById('add-note-btn').click()">
+                                <span class="btn-icon-part">📝</span>
+                                <span class="btn-text-part">Add Activity Record</span>
+                            </button>
+                            <button class="nav-action-btn nav-action-secondary" onclick="document.getElementById('export-btn').click()">
+                                <span class="btn-icon-part">📄</span>
+                                <span class="btn-text-part">Export History</span>
+                            </button>
                         </div>
                         <div class="section-nav-divider"></div>
                         <a href="#section-basic" class="section-nav-link" onclick="scrollToSection('section-basic'); return false;">Basic Info</a>
@@ -439,6 +449,37 @@
                 </form>
             </div>
         </div>
+
+        <!-- ========== PARTY TAB ========== -->
+        <div id="party-tab" class="tab-content">
+            <!-- Party List View -->
+            <div id="party-list-view" class="view">
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="window.partyManager.showCreateParty()">+ Create New Party</button>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="show-deleted-parties" onchange="window.partyManager.toggleDeletedParties()">
+                        Show Deleted Parties
+                    </label>
+                </div>
+                <div id="party-list" class="party-list"></div>
+            </div>
+
+            <!-- Party Detail View -->
+            <div id="party-detail-view" class="view" style="display: none;">
+                <div class="toolbar">
+                    <button class="btn" onclick="window.partyManager.showPartyList()">← Back to Parties</button>
+                    <button class="btn btn-secondary" onclick="window.partyManager.editPartyMembers()">Edit Members</button>
+                    <button class="btn btn-danger" onclick="window.partyManager.deleteParty()">Delete Party</button>
+                </div>
+                
+                <div class="party-header">
+                    <h2 id="party-name"></h2>
+                    <p id="party-description" class="party-description"></p>
+                </div>
+                
+                <div id="party-character-grid" class="party-character-grid"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Add Activity Record Modal -->
@@ -494,6 +535,33 @@
             <div class="form-actions">
                 <button class="btn btn-primary" onclick="confirmExport()">Export</button>
                 <button class="btn" onclick="closeExportModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== PARTY MODAL ========== -->
+    <div id="party-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2 id="party-modal-title">Create Party</h2>
+            
+            <div class="form-group">
+                <label>Party Name*</label>
+                <input type="text" id="party-name-input" placeholder="e.g., The Brave Adventurers" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="party-description-input" placeholder="Optional description..." rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Select Characters*</label>
+                <div id="character-selection-list" class="character-selection-list"></div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-primary modal-confirm-btn" onclick="window.partyManager.confirmCreateParty()">Create Party</button>
+                <button class="btn btn-secondary" onclick="window.partyManager.closePartyModal()">Cancel</button>
             </div>
         </div>
     </div>
