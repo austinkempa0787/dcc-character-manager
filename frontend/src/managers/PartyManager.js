@@ -1,7 +1,7 @@
 /**
  * Party Manager - Handles party/group management
  */
-import { GetParty, GetParties, GetDeletedParties, CreateParty, SaveParty, DeleteParty, RestoreParty, GetPartyCharacters, GetCharacters } from '../../wailsjs/go/main/App';
+import { GetParty, GetParties, GetDeletedParties, CreateParty, SaveParty, DeleteParty, RestoreParty, GetPartyCharacters, GetCharacters, GetCharacterImage } from '../../wailsjs/go/main/App';
 import { getDCCModifier } from '../utils/calculations';
 
 export class PartyManager {
@@ -16,7 +16,7 @@ export class PartyManager {
     calculateEquippedAC(char) {
         const baseAC = char.armorClass || 10;
         const agilityMod = getDCCModifier(char.agility.base);
-        
+
         // Get AC bonus from equipped armor
         let armorBonus = 0;
         if (char.equipment) {
@@ -26,7 +26,7 @@ export class PartyManager {
                 }
             });
         }
-        
+
         return baseAC + agilityMod + armorBonus;
     }
 
@@ -37,7 +37,7 @@ export class PartyManager {
         let reflexBonus = 0;
         let fortitudeBonus = 0;
         let willpowerBonus = 0;
-        
+
         if (char.equipment) {
             char.equipment.forEach(item => {
                 if (item.isActive && item.equipped && item.category === 'armor') {
@@ -47,12 +47,12 @@ export class PartyManager {
                 }
             });
         }
-        
+
         // DCC rules: Agility affects Reflex, Stamina affects Fortitude, Personality affects Willpower
         const agilityMod = getDCCModifier(char.agility.base);
         const staminaMod = getDCCModifier(char.stamina.base);
         const personalityMod = getDCCModifier(char.personality.base);
-        
+
         return {
             reflex: (char.saves.reflex || 0) + reflexBonus + agilityMod,
             fortitude: (char.saves.fortitude || 0) + fortitudeBonus + staminaMod,
@@ -84,25 +84,25 @@ export class PartyManager {
      */
     async loadPartyList() {
         try {
-            const parties = this.showDeletedParties ? 
-                await GetDeletedParties() : 
+            const parties = this.showDeletedParties ?
+                await GetDeletedParties() :
                 await GetParties();
-            
+
             const listElement = document.getElementById('party-list');
-            
+
             if (!parties || parties.length === 0) {
                 listElement.innerHTML = '<p class="empty-state">No parties yet. Create your first party!</p>';
                 return;
             }
-            
+
             listElement.innerHTML = parties.map(party => {
                 const deletedClass = !party.isActive ? 'deleted' : '';
-                const restoreButton = !party.isActive 
-                    ? `<button class="btn btn-small btn-restore" onclick="window.partyManager.restoreParty('${party.id}'); event.stopPropagation();">Restore</button>` 
+                const restoreButton = !party.isActive
+                    ? `<button class="btn btn-small btn-restore" onclick="window.partyManager.restoreParty('${party.id}'); event.stopPropagation();">Restore</button>`
                     : '';
-                
+
                 const memberCount = party.characterIds ? party.characterIds.length : 0;
-                
+
                 return `
                     <div class="party-card ${deletedClass}" onclick="window.partyManager.viewParty('${party.id}')">
                         <h3>${party.name}</h3>
@@ -133,12 +133,12 @@ export class PartyManager {
     async showCreateParty() {
         try {
             const characters = await GetCharacters();
-            
+
             if (!characters || characters.length === 0) {
                 alert('No characters available. Create some characters first!');
                 return;
             }
-            
+
             // Populate character selection
             const selectionList = document.getElementById('character-selection-list');
             selectionList.innerHTML = characters.map(char => `
@@ -147,11 +147,11 @@ export class PartyManager {
                     <span>${char.name} (Level ${char.level})</span>
                 </label>
             `).join('');
-            
+
             // Clear form
             document.getElementById('party-name-input').value = '';
             document.getElementById('party-description-input').value = '';
-            
+
             // Show modal
             document.getElementById('party-modal').style.display = 'flex';
         } catch (err) {
@@ -166,21 +166,21 @@ export class PartyManager {
     async confirmCreateParty() {
         const name = document.getElementById('party-name-input').value.trim();
         const description = document.getElementById('party-description-input').value.trim();
-        
+
         if (!name) {
             alert('Please enter a party name');
             return;
         }
-        
+
         // Get selected character IDs
         const checkboxes = document.querySelectorAll('.char-select-checkbox:checked');
         const characterIds = Array.from(checkboxes).map(cb => cb.value);
-        
+
         if (characterIds.length === 0) {
             alert('Please select at least one character');
             return;
         }
-        
+
         try {
             const partyId = await CreateParty(name, description, characterIds);
             this.closePartyModal();
@@ -205,19 +205,23 @@ export class PartyManager {
         try {
             const party = await GetParty(id);
             const characters = await GetPartyCharacters(id);
-            
+
             this.currentParty = party;
-            
+
             document.getElementById('party-list-view').style.display = 'none';
             document.getElementById('party-detail-view').style.display = 'block';
-            
+
             document.getElementById('party-name').textContent = party.name;
             document.getElementById('party-description').textContent = party.description || 'No description';
-            
-            // Render character cards
+
+            // Load images for all characters and render cards
+            const characterCards = await Promise.all(
+                characters.map(char => this.renderCharacterCardAsync(char))
+            );
+
             const grid = document.getElementById('party-character-grid');
-            grid.innerHTML = characters.map(char => this.renderCharacterCard(char)).join('');
-            
+            grid.innerHTML = characterCards.join('');
+
         } catch (err) {
             console.error('Failed to load party:', err);
             alert('Failed to load party: ' + err);
@@ -225,29 +229,52 @@ export class PartyManager {
     }
 
     /**
+     * Render character preview card (async to load image)
+     */
+    async renderCharacterCardAsync(char) {
+        // Load character image if exists
+        let imageData = '';
+        if (char.imageFilename) {
+            try {
+                imageData = await GetCharacterImage(char.imageFilename);
+            } catch (err) {
+                console.error('Failed to load character image:', err);
+            }
+        }
+
+        return this.renderCharacterCard(char, imageData);
+    }
+
+    /**
      * Render character preview card
      */
-    renderCharacterCard(char) {
+    renderCharacterCard(char, imageData = '') {
         const initial = char.name.charAt(0).toUpperCase();
-        const classInfo = char.classes && char.classes.length > 0 
-            ? char.classes[0].name 
+        const classInfo = char.classes && char.classes.length > 0
+            ? char.classes[0].name
             : 'Adventurer';
-        
+
+        // Determine avatar display
+        const avatarContent = imageData
+            ? `<img src="${imageData}" alt="${char.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               <div class="character-avatar-fallback" style="display: none;">${initial}</div>`
+            : `<div class="character-avatar-text">${initial}</div>`;
+
         // Calculate values
         const formatMod = (mod) => mod >= 0 ? `+${mod}` : mod;
-        
+
         const strMod = getDCCModifier(char.strength.base);
         const agiMod = getDCCModifier(char.agility.base);
         const staMod = getDCCModifier(char.stamina.base);
         const perMod = getDCCModifier(char.personality.base);
         const intMod = getDCCModifier(char.intelligence.base);
         const lckMod = getDCCModifier(char.luck.base);
-        
+
         // Calculate equipped AC and total saves
         const equippedAC = this.calculateEquippedAC(char);
         const totalSaves = this.calculateTotalSaves(char);
         const weapons = this.getEquippedWeapons(char);
-        
+
         // Weapon display
         let weaponDisplay = '';
         if (weapons.length > 0) {
@@ -261,11 +288,11 @@ export class PartyManager {
                 `;
             }).join('');
         }
-        
+
         return `
             <div class="party-character-card" onclick="window.partyManager.openCharacter('${char.id}'); event.stopPropagation();">
                 <div class="card-header">
-                    <div class="character-avatar">${initial}</div>
+                    <div class="character-avatar">${avatarContent}</div>
                     <div class="character-name-level">
                         <h3>${char.name}</h3>
                         <p>Level ${char.level} ${classInfo}</p>
@@ -345,10 +372,10 @@ export class PartyManager {
      */
     async editPartyMembers() {
         if (!this.currentParty) return;
-        
+
         try {
             const characters = await GetCharacters();
-            
+
             const selectionList = document.getElementById('character-selection-list');
             selectionList.innerHTML = characters.map(char => {
                 const isSelected = this.currentParty.characterIds.includes(char.id);
@@ -359,12 +386,12 @@ export class PartyManager {
                     </label>
                 `;
             }).join('');
-            
+
             document.getElementById('party-name-input').value = this.currentParty.name;
             document.getElementById('party-description-input').value = this.currentParty.description || '';
             document.getElementById('party-modal-title').textContent = 'Edit Party';
             document.getElementById('party-modal').style.display = 'flex';
-            
+
             // Change button to "Save"
             const confirmBtn = document.querySelector('#party-modal .modal-confirm-btn');
             if (confirmBtn) {
@@ -383,20 +410,20 @@ export class PartyManager {
     async confirmEditParty() {
         const name = document.getElementById('party-name-input').value.trim();
         const description = document.getElementById('party-description-input').value.trim();
-        
+
         const checkboxes = document.querySelectorAll('.char-select-checkbox:checked');
         const characterIds = Array.from(checkboxes).map(cb => cb.value);
-        
+
         if (!name || characterIds.length === 0) {
             alert('Please enter a name and select at least one character');
             return;
         }
-        
+
         try {
             this.currentParty.name = name;
             this.currentParty.description = description;
             this.currentParty.characterIds = characterIds;
-            
+
             await SaveParty(this.currentParty);
             this.closePartyModal();
             this.viewParty(this.currentParty.id);
@@ -412,7 +439,7 @@ export class PartyManager {
     async deleteParty() {
         if (!this.currentParty) return;
         if (!confirm('Are you sure you want to delete this party?')) return;
-        
+
         try {
             await DeleteParty(this.currentParty.id);
             this.showPartyList();
