@@ -224,6 +224,54 @@ func (a *App) GetPartyCharacters(partyId string) ([]*models.Character, error) {
 	return a.storage.GetPartyCharacters(partyId)
 }
 
+// Image management methods
+
+func (a *App) SaveCharacterImage(characterID string, base64Data string) (string, error) {
+	// Delete old image if it exists
+	char, err := a.storage.GetCharacter(characterID)
+	if err == nil && char.ImageFilename != "" {
+		a.storage.DeleteCharacterImage(char.ImageFilename)
+	}
+
+	// Save new image
+	filename, err := a.storage.SaveCharacterImage(characterID, base64Data)
+	if err != nil {
+		return "", err
+	}
+
+	// Update character with new filename
+	if char != nil {
+		char.ImageFilename = filename
+		if err := a.storage.SaveCharacter(char, ""); err != nil {
+			return "", err
+		}
+	}
+
+	return filename, nil
+}
+
+func (a *App) GetCharacterImage(filename string) (string, error) {
+	return a.storage.GetCharacterImage(filename)
+}
+
+func (a *App) DeleteCharacterImage(characterID string) error {
+	char, err := a.storage.GetCharacter(characterID)
+	if err != nil {
+		return err
+	}
+
+	if char.ImageFilename != "" {
+		if err := a.storage.DeleteCharacterImage(char.ImageFilename); err != nil {
+			return err
+		}
+
+		char.ImageFilename = ""
+		return a.storage.SaveCharacter(char, "")
+	}
+
+	return nil
+}
+
 // Debug logging method
 func (a *App) WriteDebugLog(message string) error {
 	logFile := "/tmp/dcc-undo-log.txt"
