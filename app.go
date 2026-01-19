@@ -173,6 +173,57 @@ func (a *App) RestoreWorldNote(id string) error {
 	return a.storage.RestoreWorldNote(id)
 }
 
+// Party management methods
+
+func (a *App) CreateParty(name string, description string, characterIds []string) (string, error) {
+	id := fmt.Sprintf("party-%d", time.Now().Unix())
+
+	party := &models.Party{
+		ID:           id,
+		Name:         name,
+		Description:  description,
+		CharacterIDs: characterIds,
+		IsActive:     true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := a.storage.SaveParty(party); err != nil {
+		return "", err
+	}
+
+	return id, nil
+}
+
+func (a *App) GetParty(id string) (*models.Party, error) {
+	return a.storage.GetParty(id)
+}
+
+func (a *App) GetParties() ([]*models.Party, error) {
+	return a.storage.GetParties()
+}
+
+func (a *App) GetDeletedParties() ([]*models.Party, error) {
+	return a.storage.GetDeletedParties()
+}
+
+func (a *App) SaveParty(party *models.Party) error {
+	party.UpdatedAt = time.Now()
+	return a.storage.SaveParty(party)
+}
+
+func (a *App) DeleteParty(id string) error {
+	return a.storage.DeleteParty(id)
+}
+
+func (a *App) RestoreParty(id string) error {
+	return a.storage.RestoreParty(id)
+}
+
+func (a *App) GetPartyCharacters(partyId string) ([]*models.Character, error) {
+	return a.storage.GetPartyCharacters(partyId)
+}
+
 // Debug logging method
 func (a *App) WriteDebugLog(message string) error {
 	logFile := "/tmp/dcc-undo-log.txt"
