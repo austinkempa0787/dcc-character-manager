@@ -17,11 +17,12 @@ const (
 	mapsDir       = "maps"
 	worldNotesDir = "world-notes"
 	partiesDir    = "parties"
+	imagesDir     = "images"
 )
 
 type Storage struct {
-	baseDir         string
-	changeDetector  *history.ChangeDetector
+	baseDir        string
+	changeDetector *history.ChangeDetector
 }
 
 func NewStorage() *Storage {
@@ -37,6 +38,7 @@ func NewStorage() *Storage {
 	os.MkdirAll(filepath.Join(baseDir, mapsDir), 0755)
 	os.MkdirAll(filepath.Join(baseDir, worldNotesDir), 0755)
 	os.MkdirAll(filepath.Join(baseDir, partiesDir), 0755)
+	os.MkdirAll(filepath.Join(baseDir, imagesDir), 0755)
 
 	return &Storage{
 		baseDir:        baseDir,
