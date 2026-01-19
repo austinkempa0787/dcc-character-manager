@@ -1,7 +1,7 @@
 /**
  * Character Manager - Handles character CRUD operations and state management
  */
-import { GetCharacter, GetCharacters, GetDeletedCharacters, SaveCharacter, AddHistoryNote, DeleteCharacter, RestoreCharacter } from '../../wailsjs/go/main/App';
+import { GetCharacter, GetCharacters, GetDeletedCharacters, SaveCharacter, AddHistoryNote, DeleteCharacter, RestoreCharacter, SaveCharacterImage, GetCharacterImage, DeleteCharacterImage } from '../../wailsjs/go/main/App';
 import { updateAttributeModifiers, updateCalculatedValues, collectEquipmentFromForm } from '../utils/calculations';
 import { setupAutoResize } from '../utils/autoResize';
 
@@ -18,23 +18,23 @@ export class CharacterManager {
      */
     async loadCharacterList() {
         try {
-            const characters = this.showDeletedCharacters ? 
-                await GetDeletedCharacters() : 
+            const characters = this.showDeletedCharacters ?
+                await GetDeletedCharacters() :
                 await GetCharacters();
-            
+
             const listElement = document.getElementById('character-list');
-            
+
             if (!characters || characters.length === 0) {
                 listElement.innerHTML = '<p class="empty-state">No characters yet. Create your first character!</p>';
                 return;
             }
-            
+
             listElement.innerHTML = characters.map(char => {
                 const deletedClass = !char.isActive ? 'deleted' : '';
-                const restoreButton = !char.isActive 
-                    ? `<button class="btn btn-small btn-restore" onclick="window.characterManager.restoreCharacter('${char.id}'); event.stopPropagation();">Restore</button>` 
+                const restoreButton = !char.isActive
+                    ? `<button class="btn btn-small btn-restore" onclick="window.characterManager.restoreCharacter('${char.id}'); event.stopPropagation();">Restore</button>`
                     : '';
-                
+
                 return `
                     <div class="character-card ${deletedClass}" onclick="window.characterManager.editCharacter('${char.id}')">
                         <h3>${char.name}</h3>
@@ -92,7 +92,7 @@ export class CharacterManager {
                 history: [],
                 isActive: true
             };
-            
+
             await SaveCharacter(newCharacter, "Character created");
             this.editCharacter(newCharacter.id);
         } catch (err) {
@@ -109,27 +109,27 @@ export class CharacterManager {
         try {
             const char = await GetCharacter(id);
             this.currentCharacter = char;
-            
+
             document.getElementById('character-list-view').style.display = 'none';
             document.getElementById('character-edit-view').style.display = 'block';
-            
+
             // Populate form
             this.populateForm(char);
-            
+
             // Load nested items (will be called from respective managers)
             if (window.equipmentManager) window.equipmentManager.loadEquipment(char);
             if (window.abilityManager) window.abilityManager.loadAbilities(char);
             if (window.classManager) window.classManager.loadClasses(char);
             if (window.tableManager) window.tableManager.loadTables(char);
-            
+
             this.refreshHistory();
             updateAttributeModifiers();
             updateCalculatedValues(this.currentCharacter);
             this.setupAutoSaveListeners();
-            
+
             // Track current HP for change detection
             this.previousHP = char.currentHealth;
-            
+
             // Add special listener for HP changes
             const hpField = document.getElementById('currentHealth');
             hpField.addEventListener('change', (e) => this.handleHPChange(e));
@@ -154,7 +154,7 @@ export class CharacterManager {
         document.getElementById('experienceNeeded').value = char.experienceNeeded || 0;
         document.getElementById('armorClass').value = char.armorClass;
         document.getElementById('initiative').value = char.initiative || 0;
-        
+
         document.getElementById('strength-base').value = char.strength.base;
         document.getElementById('strength-temp').value = char.strength.temporary || 0;
         document.getElementById('agility-base').value = char.agility.base;
@@ -167,17 +167,20 @@ export class CharacterManager {
         document.getElementById('intelligence-temp').value = char.intelligence.temporary || 0;
         document.getElementById('luck-base').value = char.luck.base;
         document.getElementById('luck-temp').value = char.luck.temporary || 0;
-        
+
         document.getElementById('reflex').value = char.saves.reflex;
         document.getElementById('fortitude').value = char.saves.fortitude;
         document.getElementById('willpower').value = char.saves.willpower;
-        
+
         document.getElementById('meleeAttackBonus').value = char.meleeAttackBonus || 0;
         document.getElementById('meleeDamageBonus').value = char.meleeDamageBonus || 0;
         document.getElementById('missileAttackBonus').value = char.missileAttackBonus || 0;
         document.getElementById('missileDamageBonus').value = char.missileDamageBonus || 0;
-        
+
         document.getElementById('notes').value = char.notes || '';
+
+        // Load and display character image
+        this.loadAndDisplayImage(char.imageFilename || '');
     }
 
     /**
@@ -189,7 +192,7 @@ export class CharacterManager {
             el.addEventListener('change', () => this.scheduleAutoSave());
             el.addEventListener('blur', () => this.scheduleAutoSave());
         });
-        
+
         // Add listeners to attribute fields to update modifiers
         ['strength', 'agility', 'stamina', 'personality', 'intelligence', 'luck'].forEach(attr => {
             const baseField = document.getElementById(`${attr}-base`);
@@ -203,7 +206,7 @@ export class CharacterManager {
                 tempField.addEventListener('change', updateAttributeModifiers);
             }
         });
-        
+
         // Add listeners to save and AC fields to update calculated values
         ['reflex', 'fortitude', 'willpower', 'armorClass'].forEach(field => {
             const el = document.getElementById(field);
@@ -227,16 +230,16 @@ export class CharacterManager {
      */
     async autoSaveCharacter() {
         if (!this.currentCharacter) return;
-        
+
         try {
             const id = document.getElementById('character-id').value;
             const equipment = collectEquipmentFromForm();
-            
+
             // Collect from other managers
             const abilities = window.abilityManager ? window.abilityManager.collectAbilities() : [];
             const classes = window.classManager ? window.classManager.collectClasses() : [];
             const tables = window.tableManager ? window.tableManager.collectTables() : [];
-            
+
             const character = {
                 id: id,
                 name: document.getElementById('name').value,
@@ -249,7 +252,7 @@ export class CharacterManager {
                 armorClass: parseInt(document.getElementById('armorClass').value) || 10,
                 initiative: parseInt(document.getElementById('initiative').value) || 0,
                 isActive: this.currentCharacter.isActive,
-                
+
                 strength: {
                     base: parseInt(document.getElementById('strength-base').value),
                     temporary: parseInt(document.getElementById('strength-temp').value) || 0
@@ -274,26 +277,27 @@ export class CharacterManager {
                     base: parseInt(document.getElementById('luck-base').value),
                     temporary: parseInt(document.getElementById('luck-temp').value) || 0
                 },
-                
+
                 saves: {
                     reflex: parseInt(document.getElementById('reflex').value),
                     fortitude: parseInt(document.getElementById('fortitude').value),
                     willpower: parseInt(document.getElementById('willpower').value)
                 },
-                
+
                 meleeAttackBonus: parseInt(document.getElementById('meleeAttackBonus').value) || 0,
                 meleeDamageBonus: parseInt(document.getElementById('meleeDamageBonus').value) || 0,
                 missileAttackBonus: parseInt(document.getElementById('missileAttackBonus').value) || 0,
                 missileDamageBonus: parseInt(document.getElementById('missileDamageBonus').value) || 0,
-                
+
                 notes: document.getElementById('notes').value,
+                imageFilename: this.currentCharacter.imageFilename || '',
                 equipment: equipment,
                 abilities: abilities,
                 classes: classes,
                 tables: tables,
                 history: this.currentCharacter.history || []
             };
-            
+
             await SaveCharacter(character, "");
             const updated = await GetCharacter(id);
             this.currentCharacter = updated;
@@ -312,7 +316,7 @@ export class CharacterManager {
             const sortedHistory = [...this.currentCharacter.history].sort((a, b) => {
                 return new Date(b.timestamp) - new Date(a.timestamp);
             });
-            
+
             historyLog.innerHTML = sortedHistory.map(entry => {
                 const timestamp = new Date(entry.timestamp).toLocaleString();
                 let content = '';
@@ -340,20 +344,20 @@ export class CharacterManager {
     handleHPChange(event) {
         const newHP = parseInt(event.target.value);
         const maxHP = parseInt(document.getElementById('maxHealth').value);
-        
+
         // Only show modal if HP changed (not max HP)
         if (this.previousHP !== null && newHP !== this.previousHP && newHP !== maxHP) {
             const diff = newHP - this.previousHP;
-            const message = diff > 0 
+            const message = diff > 0
                 ? `HP increased by ${diff} (${this.previousHP} → ${newHP})`
                 : `HP decreased by ${Math.abs(diff)} (${this.previousHP} → ${newHP})`;
-            
+
             document.getElementById('hp-change-message').textContent = message;
             document.getElementById('hp-change-note').value = '';
             document.getElementById('hp-change-modal').style.display = 'flex';
-            
+
             this.previousHP = newHP;
-            
+
             // Focus on textarea after modal appears
             setTimeout(() => document.getElementById('hp-change-note').focus(), 100);
         } else {
@@ -368,7 +372,7 @@ export class CharacterManager {
     async confirmHPChange() {
         const note = document.getElementById('hp-change-note').value.trim();
         document.getElementById('hp-change-modal').style.display = 'none';
-        
+
         if (note && this.currentCharacter) {
             try {
                 await AddHistoryNote(this.currentCharacter.id, note);
@@ -398,7 +402,7 @@ export class CharacterManager {
             alert('Please enter a note');
             return;
         }
-        
+
         if (this.currentCharacter) {
             try {
                 await AddHistoryNote(this.currentCharacter.id, note);
@@ -418,8 +422,7 @@ export class CharacterManager {
      */
     async deleteCharacter() {
         if (!this.currentCharacter) return;
-        if (!confirm('Are you sure you want to delete this character?')) return;
-        
+
         try {
             await DeleteCharacter(this.currentCharacter.id);
             this.showCharacterList();
@@ -459,6 +462,115 @@ export class CharacterManager {
         const section = document.getElementById(sectionId);
         if (section) {
             section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    /**
+     * Handle character image upload
+     * @param {Event} event - File input change event
+     */
+    async handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image size must be less than 5MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const imageData = e.target.result;
+
+            try {
+                // Save image through backend (creates unique file)
+                const filename = await SaveCharacterImage(this.currentCharacter.id, imageData);
+
+                // Update character with filename
+                this.currentCharacter.imageFilename = filename;
+
+                // Display image immediately
+                await this.loadAndDisplayImage(filename);
+
+                // Auto-save character
+                await this.autoSaveCharacter();
+
+            } catch (err) {
+                console.error('Failed to save image:', err);
+                alert('Failed to save image: ' + err);
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /**
+     * Load and display character image
+     * @param {string} filename - Image filename
+     */
+    async loadAndDisplayImage(filename) {
+        if (!filename) {
+            this.displayCharacterImage('');
+            return;
+        }
+
+        try {
+            const imageData = await GetCharacterImage(filename);
+            this.displayCharacterImage(imageData);
+        } catch (err) {
+            console.error('Failed to load image:', err);
+            this.displayCharacterImage('');
+        }
+    }
+
+    /**
+     * Display character image
+     * @param {string} imageData - Base64 image data
+     */
+    displayCharacterImage(imageData) {
+        const preview = document.getElementById('character-image-preview');
+        const placeholder = document.getElementById('character-image-placeholder');
+        const removeBtn = document.getElementById('remove-image-btn');
+
+        if (imageData) {
+            preview.src = imageData;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+            removeBtn.style.display = 'inline-flex';
+        } else {
+            preview.style.display = 'none';
+            placeholder.style.display = 'flex';
+            removeBtn.style.display = 'none';
+        }
+    }
+
+    /**
+     * Remove character image
+     */
+    async removeImage() {
+        if (!confirm('Remove character image?')) return;
+
+        try {
+            await DeleteCharacterImage(this.currentCharacter.id);
+
+            this.currentCharacter.imageFilename = '';
+            this.displayCharacterImage('');
+
+            // Clear file input
+            document.getElementById('character-image-input').value = '';
+
+            // Auto-save character
+            await this.autoSaveCharacter();
+
+        } catch (err) {
+            console.error('Failed to delete image:', err);
+            alert('Failed to delete image: ' + err);
         }
     }
 }
