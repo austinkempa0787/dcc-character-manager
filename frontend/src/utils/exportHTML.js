@@ -13,24 +13,61 @@ import { SaveAndOpenHTML } from '../../wailsjs/go/main/App';
 export async function generateCharacterSheetHTML(character, includeFullHistory, dateFrom, dateTo) {
     // Filter history by date range if not including full history
     let historyToInclude = character.history || [];
-    
+
     if (!includeFullHistory && dateFrom && dateTo) {
         const fromDate = new Date(dateFrom);
         const toDate = new Date(dateTo);
         toDate.setHours(23, 59, 59, 999); // End of day
-        
+
         historyToInclude = historyToInclude.filter(entry => {
             const entryDate = new Date(entry.timestamp);
             return entryDate >= fromDate && entryDate <= toDate;
         });
     }
-    
-    // Calculate attribute modifiers
-    const calcMod = (base) => {
-        const mod = Math.floor((base - 10) / 2);
-        return mod >= 0 ? `+${mod}` : mod;
+
+    // Calculate attribute modifiers using DCC rules
+    const getDCCModifier = (base) => {
+        if (base <= 3) return -3;
+        if (base <= 5) return -2;
+        if (base <= 8) return -1;
+        if (base <= 12) return 0;
+        if (base <= 15) return +1;
+        if (base <= 17) return +2;
+        if (base <= 19) return +3;
+        if (base <= 21) return +4;
+        if (base <= 23) return +5;
+        return +6;
     };
-    
+
+    const formatMod = (mod) => mod >= 0 ? `+${mod}` : mod;
+
+    // Calculate ability modifiers
+    const agilityMod = getDCCModifier(character.agility.base);
+    const staminaMod = getDCCModifier(character.stamina.base);
+    const personalityMod = getDCCModifier(character.personality.base);
+
+    // Calculate total saves (base + ability mod + armor bonuses)
+    let reflexBonus = 0;
+    let fortitudeBonus = 0;
+    let willpowerBonus = 0;
+    let acBonus = 0;
+
+    if (character.equipment) {
+        character.equipment.forEach(item => {
+            if (item.isActive && item.equipped && item.category === 'armor') {
+                if (item.reflexSave) reflexBonus += item.reflexSave;
+                if (item.fortitudeSave) fortitudeBonus += item.fortitudeSave;
+                if (item.willpowerSave) willpowerBonus += item.willpowerSave;
+                if (item.acBonus) acBonus += item.acBonus;
+            }
+        });
+    }
+
+    const totalReflex = character.saves.reflex + agilityMod + reflexBonus;
+    const totalFortitude = character.saves.fortitude + staminaMod + fortitudeBonus;
+    const totalWillpower = character.saves.willpower + personalityMod + willpowerBonus;
+    const totalAC = character.armorClass + agilityMod + acBonus;
+
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -171,7 +208,7 @@ export async function generateCharacterSheetHTML(character, includeFullHistory, 
         </div>
         <div class="stat-box">
             <div class="stat-label">AC</div>
-            <div class="stat-value">${character.armorClass}</div>
+            <div class="stat-value">${totalAC}</div>
         </div>
         <div class="stat-box">
             <div class="stat-label">Initiative</div>
@@ -189,37 +226,37 @@ export async function generateCharacterSheetHTML(character, includeFullHistory, 
             <div class="attribute-name">STR</div>
             <div class="attribute-value">${character.strength.base}</div>
             ${character.strength.temporary && character.strength.temporary !== 0 ? `<div style="font-size: 0.9em;">(${character.strength.temporary})</div>` : ''}
-            <div class="attribute-mod">${calcMod(character.strength.base)}</div>
+            <div class="attribute-mod">${formatMod(getDCCModifier(character.strength.base))}</div>
         </div>
         <div class="attribute">
             <div class="attribute-name">AGI</div>
             <div class="attribute-value">${character.agility.base}</div>
             ${character.agility.temporary && character.agility.temporary !== 0 ? `<div style="font-size: 0.9em;">(${character.agility.temporary})</div>` : ''}
-            <div class="attribute-mod">${calcMod(character.agility.base)}</div>
+            <div class="attribute-mod">${formatMod(getDCCModifier(character.agility.base))}</div>
         </div>
         <div class="attribute">
             <div class="attribute-name">STA</div>
             <div class="attribute-value">${character.stamina.base}</div>
             ${character.stamina.temporary && character.stamina.temporary !== 0 ? `<div style="font-size: 0.9em;">(${character.stamina.temporary})</div>` : ''}
-            <div class="attribute-mod">${calcMod(character.stamina.base)}</div>
+            <div class="attribute-mod">${formatMod(getDCCModifier(character.stamina.base))}</div>
         </div>
         <div class="attribute">
             <div class="attribute-name">PER</div>
             <div class="attribute-value">${character.personality.base}</div>
             ${character.personality.temporary && character.personality.temporary !== 0 ? `<div style="font-size: 0.9em;">(${character.personality.temporary})</div>` : ''}
-            <div class="attribute-mod">${calcMod(character.personality.base)}</div>
+            <div class="attribute-mod">${formatMod(getDCCModifier(character.personality.base))}</div>
         </div>
         <div class="attribute">
             <div class="attribute-name">INT</div>
             <div class="attribute-value">${character.intelligence.base}</div>
             ${character.intelligence.temporary && character.intelligence.temporary !== 0 ? `<div style="font-size: 0.9em;">(${character.intelligence.temporary})</div>` : ''}
-            <div class="attribute-mod">${calcMod(character.intelligence.base)}</div>
+            <div class="attribute-mod">${formatMod(getDCCModifier(character.intelligence.base))}</div>
         </div>
         <div class="attribute">
             <div class="attribute-name">LCK</div>
             <div class="attribute-value">${character.luck.base}</div>
             ${character.luck.temporary && character.luck.temporary !== 0 ? `<div style="font-size: 0.9em;">(${character.luck.temporary})</div>` : ''}
-            <div class="attribute-mod">${calcMod(character.luck.base)}</div>
+            <div class="attribute-mod">${formatMod(getDCCModifier(character.luck.base))}</div>
         </div>
     </div>
 
@@ -227,15 +264,15 @@ export async function generateCharacterSheetHTML(character, includeFullHistory, 
     <div class="stats-grid">
         <div class="stat-box">
             <div class="stat-label">Reflex</div>
-            <div class="stat-value">${character.saves.reflex}</div>
+            <div class="stat-value">${totalReflex}</div>
         </div>
         <div class="stat-box">
             <div class="stat-label">Fortitude</div>
-            <div class="stat-value">${character.saves.fortitude}</div>
+            <div class="stat-value">${totalFortitude}</div>
         </div>
         <div class="stat-box">
             <div class="stat-label">Willpower</div>
-            <div class="stat-value">${character.saves.willpower}</div>
+            <div class="stat-value">${totalWillpower}</div>
         </div>
     </div>
 
@@ -328,7 +365,7 @@ ${character.notes}
     </div>
 </body>
 </html>`;
-    
+
     // Save and open the HTML file
     try {
         const filepath = await SaveAndOpenHTML(html, character.name);
