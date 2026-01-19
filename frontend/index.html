@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DCC Character Manager</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:wght@400;600&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <div id="app">
         <header>
@@ -46,34 +50,70 @@
                                 <span class="btn-icon-part">←</span>
                                 <span class="btn-text-part">Back to List</span>
                             </button>
-                            <button class="nav-action-btn nav-action-info" onclick="document.getElementById('add-note-btn').click()">
+                            <button class="nav-action-btn nav-action-info"
+                                onclick="document.getElementById('add-note-btn').click()">
                                 <span class="btn-icon-part">📝</span>
                                 <span class="btn-text-part">Add Activity Record</span>
                             </button>
-                            <button class="nav-action-btn nav-action-secondary" onclick="document.getElementById('export-btn').click()">
+                            <button class="nav-action-btn nav-action-secondary"
+                                onclick="document.getElementById('export-btn').click()">
                                 <span class="btn-icon-part">📄</span>
                                 <span class="btn-text-part">Export History</span>
                             </button>
                         </div>
                         <div class="section-nav-divider"></div>
-                        <a href="#section-basic" class="section-nav-link" onclick="scrollToSection('section-basic'); return false;">Basic Info</a>
-                        <a href="#section-stats" class="section-nav-link" onclick="scrollToSection('section-stats'); return false;">Character Stats</a>
-                        <a href="#section-attributes" class="section-nav-link" onclick="scrollToSection('section-attributes'); return false;">Attributes</a>
-                        <a href="#section-saves" class="section-nav-link" onclick="scrollToSection('section-saves'); return false;">Saving Throws</a>
-                        <a href="#section-combat" class="section-nav-link" onclick="scrollToSection('section-combat'); return false;">Combat Info</a>
-                        <a href="#section-equipment" class="section-nav-link" onclick="scrollToSection('section-equipment'); return false;">Equipment</a>
-                        <a href="#section-abilities" class="section-nav-link" onclick="scrollToSection('section-abilities'); return false;">Abilities</a>
-                        <a href="#section-tables" class="section-nav-link" onclick="scrollToSection('section-tables'); return false;">Tables</a>
-                        <a href="#section-notes" class="section-nav-link" onclick="scrollToSection('section-notes'); return false;">Notes</a>
-                        <a href="#section-history" class="section-nav-link" onclick="scrollToSection('section-history'); return false;">History</a>
+                        <a href="#section-basic" class="section-nav-link"
+                            onclick="scrollToSection('section-basic'); return false;">Basic Info</a>
+                        <a href="#section-stats" class="section-nav-link"
+                            onclick="scrollToSection('section-stats'); return false;">Character Stats</a>
+                        <a href="#section-attributes" class="section-nav-link"
+                            onclick="scrollToSection('section-attributes'); return false;">Attributes</a>
+                        <a href="#section-saves" class="section-nav-link"
+                            onclick="scrollToSection('section-saves'); return false;">Saving Throws</a>
+                        <a href="#section-combat" class="section-nav-link"
+                            onclick="scrollToSection('section-combat'); return false;">Combat Info</a>
+                        <a href="#section-equipment" class="section-nav-link"
+                            onclick="scrollToSection('section-equipment'); return false;">Equipment</a>
+                        <a href="#section-abilities" class="section-nav-link"
+                            onclick="scrollToSection('section-abilities'); return false;">Abilities</a>
+                        <a href="#section-tables" class="section-nav-link"
+                            onclick="scrollToSection('section-tables'); return false;">Tables</a>
+                        <a href="#section-notes" class="section-nav-link"
+                            onclick="scrollToSection('section-notes'); return false;">Notes</a>
+                        <a href="#section-history" class="section-nav-link"
+                            onclick="scrollToSection('section-history'); return false;">History</a>
                     </nav>
 
                     <div class="character-form-wrapper">
                         <form id="character-form" class="character-form">
                             <input type="hidden" id="character-id">
-                            
+
                             <div class="form-section" id="section-basic">
                                 <h2>Basic Information</h2>
+
+                                <!-- Character Image -->
+                                <div class="character-image-section">
+                                    <div class="character-image-preview">
+                                        <img id="character-image-preview" style="display: none;" alt="Character">
+                                        <div id="character-image-placeholder" class="character-image-placeholder">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                    </div>
+                                    <div class="character-image-controls">
+                                        <input type="file" id="character-image-input" accept="image/*"
+                                            style="display: none;"
+                                            onchange="window.characterManager.handleImageUpload(event)">
+                                        <button type="button" class="btn btn-secondary"
+                                            onclick="document.getElementById('character-image-input').click()">
+                                            <i class="fas fa-upload"></i> Upload Image
+                                        </button>
+                                        <button type="button" class="btn btn-danger" id="remove-image-btn"
+                                            style="display: none;" onclick="window.characterManager.removeImage()">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="name">Name</label>
@@ -92,16 +132,19 @@
                                         </select>
                                     </div>
                                 </div>
-                                
+
                                 <div class="subsection">
                                     <h3>Classes</h3>
-                                    <p class="help-text">When your character reaches level 1, add their class here. Multi-class characters can have multiple entries.</p>
+                                    <p class="help-text">When your character reaches level 1, add their class here.
+                                        Multi-class characters can have multiple entries.</p>
                                     <label class="toggle-label">
-                                        <input type="checkbox" id="show-deleted-classes" onchange="toggleDeletedClasses()">
+                                        <input type="checkbox" id="show-deleted-classes"
+                                            onchange="toggleDeletedClasses()">
                                         Show Deleted Classes
                                     </label>
                                     <div id="classes-list"></div>
-                                    <button type="button" class="btn btn-small" onclick="addClassItem()">+ Add Class</button>
+                                    <button type="button" class="btn btn-small" onclick="addClassItem()">+ Add
+                                        Class</button>
                                 </div>
                             </div>
 
@@ -136,7 +179,8 @@
                                         <h3>Combat Basics</h3>
                                         <div class="form-row">
                                             <div class="form-group">
-                                                <label for="armorClass">AC <span id="ac-total" class="calculated-value" title=""></span></label>
+                                                <label for="armorClass">AC <span id="ac-total" class="calculated-value"
+                                                        title=""></span></label>
                                                 <input type="number" id="armorClass" required>
                                             </div>
                                             <div class="form-group">
@@ -180,7 +224,8 @@
                                         <input type="number" id="personality-temp">
                                     </div>
                                     <div class="attribute-group">
-                                        <h3>Intelligence <span class="modifier" id="intelligence-modifier">+0</span></h3>
+                                        <h3>Intelligence <span class="modifier" id="intelligence-modifier">+0</span>
+                                        </h3>
                                         <label>Base</label>
                                         <input type="number" id="intelligence-base">
                                         <label>Temporary</label>
@@ -200,15 +245,18 @@
                                 <h2>Saving Throws</h2>
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="reflex">Reflex <span id="reflex-total" class="calculated-value" title=""></span></label>
+                                        <label for="reflex">Reflex <span id="reflex-total" class="calculated-value"
+                                                title=""></span></label>
                                         <input type="number" id="reflex">
                                     </div>
                                     <div class="form-group">
-                                        <label for="fortitude">Fortitude <span id="fortitude-total" class="calculated-value" title=""></span></label>
+                                        <label for="fortitude">Fortitude <span id="fortitude-total"
+                                                class="calculated-value" title=""></span></label>
                                         <input type="number" id="fortitude">
                                     </div>
                                     <div class="form-group">
-                                        <label for="willpower">Willpower <span id="willpower-total" class="calculated-value" title=""></span></label>
+                                        <label for="willpower">Willpower <span id="willpower-total"
+                                                class="calculated-value" title=""></span></label>
                                         <input type="number" id="willpower">
                                     </div>
                                 </div>
@@ -249,7 +297,8 @@
                                 <h2>Equipment</h2>
                                 <div class="equipment-filters">
                                     <label class="toggle-label">
-                                        <input type="checkbox" id="show-deleted-equipment" onchange="toggleDeletedEquipment()">
+                                        <input type="checkbox" id="show-deleted-equipment"
+                                            onchange="toggleDeletedEquipment()">
                                         Show Deleted Equipment
                                     </label>
                                     <div class="form-group-inline">
@@ -264,8 +313,10 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div id="equipped-weight-display" style="margin-bottom: 15px; padding: 10px; background: #f9f6f0; border-radius: 6px; font-weight: 600;">
-                                    Total Equipped Items: <span id="total-equipped-count">0</span> | Total Weight: <span id="total-equipped-weight">0</span> units
+                                <div id="equipped-weight-display"
+                                    style="margin-bottom: 15px; padding: 10px; background: #f9f6f0; border-radius: 6px; font-weight: 600;">
+                                    Total Equipped Items: <span id="total-equipped-count">0</span> | Total Weight: <span
+                                        id="total-equipped-weight">0</span> units
                                 </div>
                                 <div id="equipment-list"></div>
                                 <button type="button" class="btn" onclick="addEquipmentItem()">+ Add Item</button>
@@ -275,7 +326,8 @@
                                 <h2>Abilities & Powers</h2>
                                 <div class="ability-filters">
                                     <label class="toggle-label">
-                                        <input type="checkbox" id="show-deleted-abilities" onchange="toggleDeletedAbilities()">
+                                        <input type="checkbox" id="show-deleted-abilities"
+                                            onchange="toggleDeletedAbilities()">
                                         Show Deleted Abilities
                                     </label>
                                     <div class="form-group-inline">
@@ -294,7 +346,8 @@
 
                             <div class="form-section" id="section-tables">
                                 <h2>Tables</h2>
-                                <p class="help-text">Custom tables for your character (e.g., critical hit tables, corruption tables, etc.)</p>
+                                <p class="help-text">Custom tables for your character (e.g., critical hit tables,
+                                    corruption tables, etc.)</p>
                                 <label class="toggle-label">
                                     <input type="checkbox" id="show-deleted-tables" onchange="toggleDeletedTables()">
                                     Show Deleted Tables
@@ -315,9 +368,12 @@
                         </div>
 
                         <div class="form-actions">
-                            <button type="button" class="btn" id="add-note-btn" onclick="showAddNoteModal()">+ Add Activity Record</button>
-                            <button type="button" class="btn" id="export-btn" onclick="showExportModal()">Export History</button>
-                            <button type="button" class="btn btn-danger" id="delete-btn" onclick="deleteCharacter()">Delete Character</button>
+                            <button type="button" class="btn" id="add-note-btn" onclick="showAddNoteModal()">+ Add
+                                Activity Record</button>
+                            <button type="button" class="btn" id="export-btn" onclick="showExportModal()">Export
+                                History</button>
+                            <button type="button" class="btn btn-danger" id="delete-btn"
+                                onclick="deleteCharacter()">Delete Character</button>
                         </div>
                     </div>
                 </div>
@@ -344,7 +400,7 @@
                     <!-- Left Sidebar with Controls -->
                     <div class="map-sidebar">
                         <button class="btn" onclick="showMapList()">← Back to List</button>
-                        
+
                         <div class="control-section">
                             <h4>Map Settings</h4>
                             <div class="form-group">
@@ -356,33 +412,42 @@
                         <div class="control-section">
                             <h4>Drawing Tools</h4>
                             <div class="tool-buttons">
-                                <button class="tool-btn active" data-tool="pen" onclick="selectTool('pen')">✏️ Pen</button>
+                                <button class="tool-btn active" data-tool="pen" onclick="selectTool('pen')">✏️
+                                    Pen</button>
                                 <button class="tool-btn" data-tool="line" onclick="selectTool('line')">📏 Line</button>
-                                <button class="tool-btn" data-tool="rectangle" onclick="selectTool('rectangle')">⬜ Rectangle</button>
-                                <button class="tool-btn" data-tool="circle" onclick="selectTool('circle')">⭕ Circle</button>
-                                <button class="tool-btn" data-tool="eraser" onclick="selectTool('eraser')">🧹 Eraser</button>
+                                <button class="tool-btn" data-tool="rectangle" onclick="selectTool('rectangle')">⬜
+                                    Rectangle</button>
+                                <button class="tool-btn" data-tool="circle" onclick="selectTool('circle')">⭕
+                                    Circle</button>
+                                <button class="tool-btn" data-tool="eraser" onclick="selectTool('eraser')">🧹
+                                    Eraser</button>
                                 <button class="tool-btn" data-tool="pan" onclick="selectTool('pan')">✋ Move</button>
                                 <button class="tool-btn" data-tool="icon" onclick="selectTool('icon')">🏛️ Icon</button>
                             </div>
-                            
+
                             <div class="form-group" id="color-control">
                                 <label for="stroke-color">Color</label>
                                 <input type="color" id="stroke-color" value="#000000" oninput="handleColorChange()">
                             </div>
-                            
+
                             <div class="form-group" id="pen-width-control">
                                 <label for="stroke-width">Pen Width: <span id="stroke-width-value">2</span>px</label>
-                                <input type="range" id="stroke-width" min="1" max="20" value="2" oninput="handleStrokeWidthChange()">
+                                <input type="range" id="stroke-width" min="1" max="20" value="2"
+                                    oninput="handleStrokeWidthChange()">
                             </div>
-                            
+
                             <div class="form-group" id="eraser-width-control">
-                                <label for="eraser-width">Eraser Width: <span id="eraser-width-value">10</span>px</label>
-                                <input type="range" id="eraser-width" min="5" max="50" value="10" oninput="handleEraserWidthChange()">
+                                <label for="eraser-width">Eraser Width: <span
+                                        id="eraser-width-value">10</span>px</label>
+                                <input type="range" id="eraser-width" min="5" max="50" value="10"
+                                    oninput="handleEraserWidthChange()">
                             </div>
-                            
+
                             <div class="button-group" id="undo-redo-controls">
-                                <button class="btn btn-small" onclick="undoDrawing()" title="Undo (Ctrl+Z)">↶ Undo</button>
-                                <button class="btn btn-small" onclick="redoDrawing()" title="Redo (Ctrl+Y)">↷ Redo</button>
+                                <button class="btn btn-small" onclick="undoDrawing()" title="Undo (Ctrl+Z)">↶
+                                    Undo</button>
+                                <button class="btn btn-small" onclick="redoDrawing()" title="Redo (Ctrl+Y)">↷
+                                    Redo</button>
                             </div>
                         </div>
 
@@ -390,7 +455,8 @@
                             <h4>Grid Settings</h4>
                             <div class="form-group">
                                 <label for="grid-size">Grid Size</label>
-                                <input type="number" id="grid-size" value="50" min="10" max="200" onchange="updateGridSize()">
+                                <input type="number" id="grid-size" value="50" min="10" max="200"
+                                    onchange="updateGridSize()">
                             </div>
                             <div class="form-group">
                                 <label>
@@ -455,9 +521,11 @@
             <!-- Party List View -->
             <div id="party-list-view" class="view">
                 <div class="toolbar">
-                    <button class="btn btn-primary" onclick="window.partyManager.showCreateParty()">+ Create New Party</button>
+                    <button class="btn btn-primary" onclick="window.partyManager.showCreateParty()">+ Create New
+                        Party</button>
                     <label class="toggle-label">
-                        <input type="checkbox" id="show-deleted-parties" onchange="window.partyManager.toggleDeletedParties()">
+                        <input type="checkbox" id="show-deleted-parties"
+                            onchange="window.partyManager.toggleDeletedParties()">
                         Show Deleted Parties
                     </label>
                 </div>
@@ -468,15 +536,16 @@
             <div id="party-detail-view" class="view" style="display: none;">
                 <div class="toolbar">
                     <button class="btn" onclick="window.partyManager.showPartyList()">← Back to Parties</button>
-                    <button class="btn btn-secondary" onclick="window.partyManager.editPartyMembers()">Edit Members</button>
+                    <button class="btn btn-secondary" onclick="window.partyManager.editPartyMembers()">Edit
+                        Members</button>
                     <button class="btn btn-danger" onclick="window.partyManager.deleteParty()">Delete Party</button>
                 </div>
-                
+
                 <div class="party-header">
                     <h2 id="party-name"></h2>
                     <p id="party-description" class="party-description"></p>
                 </div>
-                
+
                 <div id="party-character-grid" class="party-character-grid"></div>
             </div>
         </div>
@@ -543,24 +612,25 @@
     <div id="party-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2 id="party-modal-title">Create Party</h2>
-            
+
             <div class="form-group">
                 <label>Party Name*</label>
                 <input type="text" id="party-name-input" placeholder="e.g., The Brave Adventurers" required>
             </div>
-            
+
             <div class="form-group">
                 <label>Description</label>
                 <textarea id="party-description-input" placeholder="Optional description..." rows="3"></textarea>
             </div>
-            
+
             <div class="form-group">
                 <label>Select Characters*</label>
                 <div id="character-selection-list" class="character-selection-list"></div>
             </div>
-            
+
             <div class="modal-actions">
-                <button class="btn btn-primary modal-confirm-btn" onclick="window.partyManager.confirmCreateParty()">Create Party</button>
+                <button class="btn btn-primary modal-confirm-btn"
+                    onclick="window.partyManager.confirmCreateParty()">Create Party</button>
                 <button class="btn btn-secondary" onclick="window.partyManager.closePartyModal()">Cancel</button>
             </div>
         </div>
@@ -568,5 +638,5 @@
 
     <script type="module" src="/src/main.js"></script>
 </body>
-</html>
 
+</html>
