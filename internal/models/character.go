@@ -40,6 +40,7 @@ type Character struct {
 	MeleeDamageBonus     int              `json:"meleeDamageBonus"`
 	MissileAttackBonus   int              `json:"missileAttackBonus"`
 	MissileDamageBonus   int              `json:"missileDamageBonus"`
+	ImageFilename        string           `json:"imageFilename"` // Filename of character image
 	History              []HistoryEntry   `json:"history"`
 }
 
